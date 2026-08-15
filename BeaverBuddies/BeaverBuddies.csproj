@@ -32,6 +32,7 @@
     <NuGetPackagesDir>$(UserProfile)\.nuget\packages\</NuGetPackagesDir>
     <Configurations>Debug;Release;Debug Steam;Release Steam</Configurations>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <ModSettingsPath>$(ModSettingsBasePath)version-$(TimberbornTargetVersion)\Scripts\</ModSettingsPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug Steam' OR '$(Configuration)' == 'Release Steam'">
@@ -42,7 +43,7 @@
     <Warning Text="TimberbornPath property is deprecated, use the more specific TimberbornDataPath instead" Condition="'$(TimberbornDataPath)' == ''" />
     <Error Text="TimberbornDataPath property directory not found" Condition="!Exists('$(TimberbornDataPath)')" />
     <Error Text="HarmonyPath property directory not found" Condition="!Exists('$(HarmonyPath)')" />
-    <Error Text="ModSettingsPath property directory not found" Condition="!Exists('$(ModSettingsPath)')" />
+    <Error Text="ModSettingsBasePath property directory not found" Condition="!Exists('$(ModSettingsBasePath)')" />
     <Error Text="DocumentsPath property directory not found" Condition="!Exists('$(DocumentsPath)')" />
   </Target>
 
@@ -53,13 +54,13 @@
       <PublicizeCompilerGenerated>false</PublicizeCompilerGenerated>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
     <PackageReference Include="MonoMod.Core" Version="1.3.4" />
     <PackageReference Include="MonoMod.RuntimeDetour" Version="25.3.4" />
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="16.*" />
   </ItemGroup>
 
-  <!-- OutSide Project -->
+  <!-- Outside Project -->
   <ItemGroup>
     <ProjectReference Include="..\TimberNet\TimberNet.csproj" />
   </ItemGroup>
