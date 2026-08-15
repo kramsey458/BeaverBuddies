@@ -136,6 +136,7 @@ namespace BeaverBuddies.Events
                 (typeof(PowerMeter), nameof(PowerMeter.SetMode)),
                 (typeof(PowerMeter), nameof(PowerMeter.SetPercentThreshold)),
                 (typeof(Relay), nameof(Relay.SetInput)),
+                (typeof(Relay), nameof(Relay.IncreaseInputs)),
                 (typeof(Relay), nameof(Relay.RemoveInput)),
                 (typeof(Relay), nameof(Relay.SetMode)),
                 (typeof(ResourceCounter), nameof(ResourceCounter.SetComparisonMode)),
@@ -168,10 +169,19 @@ namespace BeaverBuddies.Events
                 // so I need to refactor this class to separate these two ideas
                 (typeof(FillValve), nameof(FillValve.SetTargetHeightAndSynchronize)),
                 (typeof(FillValve), nameof(FillValve.SetTargetHeightEnabledAndSynchronize)),
+                (typeof(FillValve), nameof(FillValve.SetAutomationTargetHeightAndSynchronize)),
+                (typeof(FillValve), nameof(FillValve.SetAutomationTargetHeightEnabledAndSynchronize)),
                 (typeof(FillValve), nameof(FillValve.ToggleSynchronization)),
+                (typeof(ThrottlingValve), nameof(ThrottlingValve.SetOutflowLimitAndSynchronize)),
+                (typeof(ThrottlingValve), nameof(ThrottlingValve.SetReactionSpeedAndSynchronize)),
+                (typeof(ThrottlingValve), nameof(ThrottlingValve.SetAutomationOutflowLimitAndSynchronize)),
+                (typeof(ThrottlingValve), nameof(ThrottlingValve.SetAutomationOutflowLimitEnabledAndSynchronize)),
+                (typeof(ThrottlingValve), nameof(ThrottlingValve.ToggleSynchronization)),
                 (typeof(WaterSourceRegulator), nameof(WaterSourceRegulator.Open)),
                 (typeof(WaterSourceRegulator), nameof(WaterSourceRegulator.Close)),
                 (typeof(WaterSourceRegulator), nameof(WaterSourceRegulator.Automate)),
+                (typeof(WaterInputPipeCoordinates), nameof(WaterInputPipeCoordinates.SetDepthLimit)),
+                (typeof(WaterInputPipeCoordinates), nameof(WaterInputPipeCoordinates.DisableDepthLimit)),
                 (typeof(Clutch), nameof(Clutch.SetMode)),
 
             ];
