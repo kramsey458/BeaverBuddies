@@ -535,4 +535,49 @@ namespace BeaverBuddies.Events
             });
         }
     }
+
+    [HarmonyPatch(typeof(RelayFragment), nameof(RelayFragment.RemoveRow))]
+    [ManualMethodOverwrite]
+    /*
+    8/15/2026
+    private void RemoveRow(int index)
+	{
+		_relay.RemoveInput(index);
+		for (int i = index; i < _visibleMultipleInputs; i++)
+		{
+			_inputSelectors[i].UpdateSelectedValue();
+		}
+		_visibleMultipleInputs--;
+	}
+     */
+    static class RelayFragmentRemoveRowPatch
+    {
+        static bool Prefix(RelayFragment __instance, int index)
+        {
+            __instance._relay.RemoveInput(index);
+            // Don't update the UI (wait until the change actually happens)
+            // We move that code below.
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(RelayFragment), nameof(RelayFragment.UpdateFragment))]
+    [ManualMethodOverwrite]
+    /* See above */
+    static class RelayFragmentUpdateFragmentPatch
+    {
+        static void Postfix(RelayFragment __instance)
+        {
+            if (__instance._relay == null) return;
+            if (__instance._visibleMultipleInputs != __instance._relay.Inputs.Count)
+            {
+                __instance._visibleMultipleInputs = __instance._relay.Inputs.Count;
+                for (int i = 0; i < __instance._visibleMultipleInputs; i++)
+                {
+                    __instance._inputSelectors[i].UpdateSelectedValue();
+                }
+                __instance.UpdateMultipleInputs();
+            }
+        }
+    }
 }
