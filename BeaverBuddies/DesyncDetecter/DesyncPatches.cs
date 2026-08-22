@@ -139,6 +139,7 @@ namespace BeaverBuddies.DesyncDetecter
 
         public static string GetDestinationString(IDestination destination)
         {
+            if (destination == null) return "null";
             string destinationString = null;
             if (destination is PositionDestination)
             {
@@ -152,6 +153,19 @@ namespace BeaverBuddies.DesyncDetecter
             }
             if (destinationString == null) destinationString = destination?.GetType().Name;
             return destinationString;
+        }
+
+        public static void Postfix(Walker __instance, IDestination destination, ExecutorStatus __result)
+        {
+            if (!Settings.Debug) return;
+            string entityID = __instance.GetComponent<EntityComponent>().EntityId.ToString();
+            bool arrived = false;
+            if (__instance._currentDestination != null)
+            {
+                arrived = __instance.IsOutsideAndReachedDestination();
+            }
+            DesyncDetecterService.Trace($"{entityID} finished pathfinding; " +
+                $"reachable = { __instance.CurrentDestinationReachable }; result: {__result}");
         }
     }
 
