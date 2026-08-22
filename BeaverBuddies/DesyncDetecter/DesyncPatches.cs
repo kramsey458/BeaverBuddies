@@ -2,6 +2,7 @@
 using System;
 using Timberborn.BehaviorSystem;
 using Timberborn.BlockSystem;
+using Timberborn.CharacterMovementSystem;
 using Timberborn.EnterableSystem;
 using Timberborn.EntitySystem;
 using Timberborn.NaturalResources;
@@ -356,6 +357,24 @@ namespace BeaverBuddies.DesyncDetecter
             if (!Settings.Debug) return;
             var entityId = __instance.GetComponent<EntityComponent>()?.EntityId;
             DesyncDetecterService.Trace($"Walker {entityId} stopping movement");
+        }
+    }
+
+
+    [HarmonyPatch(typeof(PathFollower), nameof(PathFollower.ReachedLastPathCorner))]
+    public class PathFollowerReachedLastPathCornerPatcher
+    {
+        static void Prefix(PathFollower __instance)
+        {
+            if (!Settings.Debug) return;
+
+            Vector3 lastCornerPos = Vector3.zero;
+            if (__instance._pathCorners.Count > 0)
+            {
+                lastCornerPos = __instance._pathCorners[__instance._pathCorners.Count - 1].Position;
+            }
+            Vector3 transformPos = __instance._transform.position;
+            DesyncDetecterService.Trace($"Checking if PathFollower has finished: lastCorner: {lastCornerPos}; transform: {transformPos}");
         }
     }
 }
