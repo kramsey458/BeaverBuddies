@@ -1,11 +1,4 @@
-﻿//# define NO_SMOOTH_ANIMATION
-
-using BeaverBuddies.IO;
-using HarmonyLib;
-using Timberborn.CharacterMovementSystem;
-using Timberborn.EntitySystem;
-using Timberborn.WaterSystem;
-using UnityEngine;
+﻿# define NO_SMOOTH_ANIMATION
 
 namespace BeaverBuddies.Fixes
 {
