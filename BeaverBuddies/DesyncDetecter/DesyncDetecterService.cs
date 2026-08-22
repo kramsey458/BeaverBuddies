@@ -1,13 +1,10 @@
 ﻿using BeaverBuddies.Events;
-using BeaverBuddies.IO;
 using BeaverBuddies.Reporting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
-using Timberborn.Common;
 
 namespace BeaverBuddies.DesyncDetecter
 {
@@ -107,7 +104,7 @@ namespace BeaverBuddies.DesyncDetecter
             }
         }
 
-        public static void Trace(string message, bool warnIfNotDebug = true)
+        public static void Trace(string message, bool warnIfNotDebug = true, bool skipStackTrack = false)
         {
             if (!Settings.Debug)
             {
@@ -124,10 +121,11 @@ namespace BeaverBuddies.DesyncDetecter
             }
             // Trace called before the service has been initialized
             if (traces.Count == 0) return;
+            string stackTrace = skipStackTrack ? "[Skipped stack trace]" : new StackTrace().ToString();
             CurrentTrace.Add(new Trace()
             {
                 message = message,
-                stackTrace = new StackTrace().ToString(),
+                stackTrace = stackTrace,
             });
         }
 
