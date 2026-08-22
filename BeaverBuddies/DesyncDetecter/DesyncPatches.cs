@@ -1,22 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using HarmonyLib;
-using static Timberborn.NaturalResourcesReproduction.NaturalResourceReproducer;
+﻿using HarmonyLib;
+using System;
+using Timberborn.BehaviorSystem;
 using Timberborn.BlockSystem;
+using Timberborn.EnterableSystem;
 using Timberborn.EntitySystem;
-using Timberborn.NaturalResourcesReproduction;
-using Timberborn.TimeSystem;
 using Timberborn.NaturalResources;
-using UnityEngine;
-using Timberborn.WalkingSystem;
-using Timberborn.NaturalResourcesMoisture;
-using Timberborn.SoilMoistureSystem;
-using BeaverBuddies.IO;
-using Timberborn.WaterSystem;
-using Timberborn.TickSystem;
 using Timberborn.NaturalResourcesModelSystem;
+using Timberborn.NaturalResourcesMoisture;
+using Timberborn.NaturalResourcesReproduction;
 using Timberborn.ReservableSystem;
+using Timberborn.SlotSystem;
+using Timberborn.SoilMoistureSystem;
+using Timberborn.TickSystem;
+using Timberborn.TimeSystem;
+using Timberborn.WalkingSystem;
+using Timberborn.WaterSystem;
+using UnityEngine;
+using static Timberborn.NaturalResourcesReproduction.NaturalResourceReproducer;
 
 namespace BeaverBuddies.DesyncDetecter
 {
@@ -283,6 +283,54 @@ namespace BeaverBuddies.DesyncDetecter
                 DesyncDetecterService.Trace($"Adding: {tickableEntity.EntityId} at index {index}");
             }
             //Plugin.LogStackTrace();
+        }
+    }
+
+    // This adds a prefix patch the Enterer.Enter method.
+    [HarmonyPatch(typeof(Enterer), nameof(Enterer.Enter))]
+    public class EntererEnterPatcher
+    {
+        // If we set the type to void, it won't interfere with the original method.
+        // Note that the parameters have to match the original method's parameters exactly,
+        // and we can also add a __instance parameter to get the instance of the class,
+        // since this is a static method.
+        static void Prefix(Enterer __instance, Enterable enterable)
+        {
+            // We always have to add this statement to ensure these don't happen unless detailed
+            // logging is turned on, since they do add a performance cost.
+            if (!Settings.Debug) return;
+
+            // When possible, we want to parameterize the trace message with any details that might
+            // diverge between the two games.
+            // In general, try to write these in as null-safe a way as possible; we wouldn't
+            // want a trace call to crash the game!
+            var entererEntityId = __instance.GetComponent<EntityComponent>()?.EntityId;
+            var enterableEntityId = enterable?.GetComponent<EntityComponent>()?.EntityId;
+            var enterableName = enterable?.GameObject?.name;
+            DesyncDetecterService.Trace($"Entity {entererEntityId} entering {enterableName} ({enterableEntityId})");
+        }
+    }
+
+    [HarmonyPatch(typeof(SlotManager), nameof(SlotManager.AddEnterer))]
+    public class SlotManagerAddEntererPatcher
+    {
+        static void Prefix(SlotManager __instance, Enterer enterer)
+        {
+            if (!Settings.Debug) return;
+            var entererEntityId = enterer.GetComponent<EntityComponent>()?.EntityId;
+            DesyncDetecterService.Trace($"SlotManager adding enterer {entererEntityId}");
+        }
+    }
+
+    [HarmonyPatch(typeof(BehaviorManager), nameof(BehaviorManager.TickRunningExecutor))]
+    public class BehaviorManagerTickRunningExecutorPatcher
+    {
+        static void Prefix(BehaviorManager __instance)
+        {
+            if (!Settings.Debug) return;
+            var runningExecutorType = __instance._runningExecutor?.GetType().Name;
+            var elapsedTime = __instance._runningExecutorElapsedTime;
+            DesyncDetecterService.Trace($"BehaviorManager ticking executor {runningExecutorType} with last elapsed time {elapsedTime}");
         }
     }
 }
