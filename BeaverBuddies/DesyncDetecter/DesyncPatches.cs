@@ -345,7 +345,7 @@ namespace BeaverBuddies.DesyncDetecter
             if (!Settings.Debug) return;
             var runningExecutorType = __instance._runningExecutor?.GetType().Name;
             var elapsedTime = __instance._runningExecutorElapsedTime;
-            DesyncDetecterService.Trace($"BehaviorManager ticking executor {runningExecutorType} with last elapsed time {elapsedTime}");
+            DesyncDetecterService.Trace($"BehaviorManager ticking executor {runningExecutorType} with last elapsed time {elapsedTime}", true, true);
         }
     }
 
@@ -374,7 +374,8 @@ namespace BeaverBuddies.DesyncDetecter
                 lastCornerPos = __instance._pathCorners[__instance._pathCorners.Count - 1].Position;
             }
             Vector3 transformPos = __instance._transform.position;
-            DesyncDetecterService.Trace($"Checking if PathFollower has finished: lastCorner: {lastCornerPos}; transform: {transformPos}");
+            DesyncDetecterService.Trace($"Checking if PathFollower has finished: " +
+                $"lastCorner: {lastCornerPos}; transform: {transformPos}", true, true);
         }
     }
 }
