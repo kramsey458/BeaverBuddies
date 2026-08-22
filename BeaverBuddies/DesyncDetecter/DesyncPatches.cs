@@ -333,4 +333,15 @@ namespace BeaverBuddies.DesyncDetecter
             DesyncDetecterService.Trace($"BehaviorManager ticking executor {runningExecutorType} with last elapsed time {elapsedTime}");
         }
     }
+
+    [HarmonyPatch(typeof(Walker), nameof(Walker.StopMoving))]
+    public class WalkerStopMovingPatcher
+    {
+        static void Prefix(Walker __instance)
+        {
+            if (!Settings.Debug) return;
+            var entityId = __instance.GetComponent<EntityComponent>()?.EntityId;
+            DesyncDetecterService.Trace($"Walker {entityId} stopping movement");
+        }
+    }
 }
