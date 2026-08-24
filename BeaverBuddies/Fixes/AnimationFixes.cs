@@ -71,7 +71,7 @@ private void Update(float deltaTime)
             // Otherwise, update as usual
             if (!__instance._animatedPathFollower.Stopped)
             {
-                __instance.UpdateTransform(0);
+                __instance.UpdateTransform(deltaTime);
                 __instance.UpdateAnimationSpeed();
                 __instance.UpdateGroupId();
             }
@@ -88,6 +88,16 @@ private void Update(float deltaTime)
             // We've replaced the original method, so skip it
             return false;
         }
+
+        //private static float GetXRotation(CharacterRotator ma, float deltaTime)
+        //{
+
+        //    float target = (ma.IsRunning() ? _animatedPathFollower.CurrentXRotation : 0f);
+        //    float x = _characterModel.Rotation.eulerAngles.x;
+        //    float b = _animatedPathFollower.CurrentSpeed / MovementSpeedInfluence;
+        //    float num = XRotationSpeed * Mathf.Max(1f, b);
+        //    return Mathf.MoveTowardsAngle(x, target, deltaTime * num);
+        //}
     }
 #endif
 }
