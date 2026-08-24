@@ -1,3 +1,6 @@
+v1.7.2
+* Fixed a common desync that triggered when beavers entered buildings, among other things.
+
 v1.7.1
 * A changelog will now appear on version updates (that's this window!).
 * New Feature: Players can now ping the map. Open Settings->Keybindings and choose a binding for "Ping Location" to ping in game and all players will see it. Credit: @SamuZad
