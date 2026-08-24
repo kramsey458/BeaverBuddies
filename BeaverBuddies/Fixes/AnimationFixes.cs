@@ -71,6 +71,7 @@ private void Update(float deltaTime)
             // Otherwise, update as usual
             if (!__instance._animatedPathFollower.Stopped)
             {
+                __instance._characterModel.Position = __instance._animatedPathFollower.CurrentPosition;
                 //__instance.UpdateTransform(deltaTime);
                 __instance.UpdateAnimationSpeed();
                 __instance.UpdateGroupId();
