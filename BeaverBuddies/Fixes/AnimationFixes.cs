@@ -4,7 +4,6 @@ using BeaverBuddies.IO;
 using HarmonyLib;
 using Timberborn.CharacterMovementSystem;
 using Timberborn.EntitySystem;
-using Timberborn.WaterSystem;
 using UnityEngine;
 
 namespace BeaverBuddies.Fixes
@@ -51,9 +50,9 @@ private void Update(float deltaTime)
 
                 //if (entity.EntityId.ToString() == "00355d1d-36fd-f115-9c90-6a54dda73a85")
                 //{
-                //    Plugin.Log($"{entity.EntityId} (${entity.GetComponentFast<Character>().FirstName}) :\n" +
+                //    Plugin.Log($"{entity.EntityId} (${entity.GetComponent<Character>().FirstName}) :\n" +
                 //        $"index: {tickProgressService.GetEntityBucketIndex(entity)}\n" +
-                //        $"nextTick: {tickProgressService.TickableBucketService._nextTickedBucketIndex}\n" +
+                //        $"nextTick: {tickProgressService.TickableBucketService._nextBucketIndex}\n" +
                 //        $"ticked: {tickProgressService.HasTicked(entity)}\n" +
                 //        $"last: {tickProgressService.TimeAtLastTick(entity)}\n" +
                 //        $"perc: {tickProgressService.PercentTicked(entity)}\n" +
