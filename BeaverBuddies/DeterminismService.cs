@@ -959,7 +959,16 @@ namespace BeaverBuddies
                     // therefore something is null, likely _animatedPathFollower.
                     if (anim != null && rotator != null && rotator._animatedPathFollower != null)
                     {
-                        anim.UpdateTransform(0);
+                        // The time is only use to update the rotation toward a target
+                        // (it won't go beyond the target)
+                        // The best deterministic way of updating rotation before the tick
+                        // is just to finish the rotation toward that targert.
+                        // This will create a bit of a stutter, but assuming that the target
+                        // is set by tick logic (and I think it is, since it comes from
+                        // AnimatedPathFollower), it should ensure synced rotation across clients.
+                        // In between ticks, we can animate smoothly, since before each tick this
+                        // will synchronize the client and server (I hope!).
+                        anim.UpdateTransform(Time.deltaTime * 1000);
                     }
                 } catch (Exception e)
                 {
