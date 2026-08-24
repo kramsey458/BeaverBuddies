@@ -1,4 +1,10 @@
-﻿# define NO_SMOOTH_ANIMATION
+﻿//# define NO_SMOOTH_ANIMATION
+
+using BeaverBuddies.IO;
+using HarmonyLib;
+using Timberborn.CharacterMovementSystem;
+using Timberborn.EntitySystem;
+using UnityEngine;
 
 namespace BeaverBuddies.Fixes
 {
@@ -44,9 +50,9 @@ private void Update(float deltaTime)
 
                 //if (entity.EntityId.ToString() == "00355d1d-36fd-f115-9c90-6a54dda73a85")
                 //{
-                //    Plugin.Log($"{entity.EntityId} (${entity.GetComponentFast<Character>().FirstName}) :\n" +
+                //    Plugin.Log($"{entity.EntityId} (${entity.GetComponent<Character>().FirstName}) :\n" +
                 //        $"index: {tickProgressService.GetEntityBucketIndex(entity)}\n" +
-                //        $"nextTick: {tickProgressService.TickableBucketService._nextTickedBucketIndex}\n" +
+                //        $"nextTick: {tickProgressService.TickableBucketService._nextBucketIndex}\n" +
                 //        $"ticked: {tickProgressService.HasTicked(entity)}\n" +
                 //        $"last: {tickProgressService.TimeAtLastTick(entity)}\n" +
                 //        $"perc: {tickProgressService.PercentTicked(entity)}\n" +
@@ -65,12 +71,12 @@ private void Update(float deltaTime)
             // Otherwise, update as usual
             if (!__instance._animatedPathFollower.Stopped)
             {
-                __instance.UpdateTransform(deltaTime);
+                //__instance.UpdateTransform(deltaTime);
                 __instance.UpdateAnimationSpeed();
                 __instance.UpdateGroupId();
             }
             __instance.NotifyAnimationUpdated();
-            __instance.UpdateRotation();
+            //__instance.UpdateRotation();
 
             //if (position != Vector3.zero)
             //{
