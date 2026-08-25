@@ -1,3 +1,6 @@
+v1.7.3
+* Fixed a build bug where Steam options were not included
+
 v1.7.2
 * Fixed a common desync that triggered when beavers entered buildings, among other things.
 
