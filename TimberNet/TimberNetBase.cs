@@ -33,9 +33,11 @@ namespace TimberNet
 
         private readonly ConcurrentQueue<string> receivedEventQueue = new ConcurrentQueue<string>();
         private readonly ConcurrentQueue<string> logQueue = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<string> errorQueue = new ConcurrentQueue<string>();
         private byte[]? mapBytes = null;
 
-        public bool IsStopped { get; private set; } = false;
+        private volatile bool isStopped;
+        public bool IsStopped => isStopped;
 
         public int Hash { get; private set; } = 17;
 
@@ -53,13 +55,13 @@ namespace TimberNet
 
         public bool Started { get; private set; }
 
-        public virtual bool ShouldTick => Started;
+        public virtual bool ShouldTick => Started && !IsStopped;
 
         protected List<JObject> receivedEvents = new List<JObject>();
 
         public virtual void Close()
         {
-            IsStopped = true;
+            isStopped = true;
         }
 
         public TimberNetBase()
@@ -176,18 +178,23 @@ namespace TimberNet
 
         protected void SendDataWithLength(ISocketStream stream, byte[] data)
         {
-            SendLength(stream, data.Length);
-            int chunkSize = stream.MaxChunkSize;
-            // How long to sleep between chunks (may be 0)
-            int sleepMS = stream.MaxChunkSize * 1000 / stream.MaxBytesPerSecond;
-            for (int i = 0; i < data.Length; i += chunkSize)
+            // A frame includes both its header and every payload chunk. Join
+            // workers and the game thread can otherwise interleave their writes.
+            lock (stream)
             {
-                if (i != 0)
+                SendLength(stream, data.Length);
+                int chunkSize = stream.MaxChunkSize;
+                // How long to sleep between chunks (may be 0)
+                int sleepMS = stream.MaxChunkSize * 1000 / stream.MaxBytesPerSecond;
+                for (int i = 0; i < data.Length; i += chunkSize)
                 {
-                    Thread.Sleep(sleepMS);
+                    if (i != 0)
+                    {
+                        Thread.Sleep(sleepMS);
+                    }
+                    int length = Math.Min(chunkSize, data.Length - i);
+                    stream.Write(data, i, length);
                 }
-                int length = Math.Min(chunkSize, data.Length - i);
-                stream.Write(data, i, length);
             }
         }
 
@@ -201,9 +208,18 @@ namespace TimberNet
                 SendDataWithLength(client, buffer);
             } catch (Exception e)
             {
-                Log($"Error sending event: {e.Message}");
+                HandleConnectionFailure(client, $"Error sending event: {e.Message}");
             }
         }
+
+        protected virtual void HandleConnectionFailure(ISocketStream stream, string message)
+        {
+            // After a partial write the framing cannot safely be reused.
+            stream.Close();
+            Log(message);
+        }
+
+        protected void QueueError(string message) => errorQueue.Enqueue(message);
 
         protected bool TryReadLength(ISocketStream stream, out int length)
         {
@@ -225,6 +241,23 @@ namespace TimberNet
         }
 
         protected void StartListening(ISocketStream client, bool isClient)
+        {
+            try
+            {
+                ReceiveMessages(client, isClient);
+            }
+            catch (Exception e)
+            {
+                if (!IsStopped) HandleConnectionFailure(client, $"Error receiving data: {e.Message}");
+            }
+            finally
+            {
+                if (!IsStopped) HandleConnectionFailure(client, "The multiplayer connection was closed.");
+                client.Close();
+            }
+        }
+
+        private void ReceiveMessages(ISocketStream client, bool isClient)
         {
             //Log("Client connected");
             int messageCount = 0;
@@ -285,10 +318,7 @@ namespace TimberNet
             {
                 byte[] bytes = stream.ReadUntilComplete(length);
                 string message = BufferToStringMessage(bytes);
-                if (OnError != null)
-                {
-                    OnError(message);
-                }
+                HandleConnectionFailure(stream, message);
             }
         }
 
@@ -374,7 +404,9 @@ namespace TimberNet
         public void Update()
         {
             ProcessLogs();
-            if (!Started) return;
+            // UI subscribers must only run on the caller's update thread.
+            while (errorQueue.TryDequeue(out string? error)) OnError?.Invoke(error);
+            if (!Started || IsStopped) return;
             ProcessReceivedMap();
             ProcessReceivedEventsQueue();
 
@@ -401,6 +433,7 @@ namespace TimberNet
             //if (ticksSinceLoad != TickCount) Log($"Setting ticks from {TickCount} to {ticksSinceLoad}");
             TickCount = ticksSinceLoad;
             Update();
+            if (IsStopped) return new List<JObject>();
             List<JObject> toProcess = PopEventsToProcess(receivedEvents);
             toProcess.ForEach(e => ProcessReceivedEvent(e));
             return FilterEvents(toProcess);
@@ -409,7 +442,7 @@ namespace TimberNet
         public bool HasEventsForTick(int tickSinceLoad)
         {
             Update();
-            return receivedEvents.Any(e => GetTick(e) == tickSinceLoad);
+            return !IsStopped && receivedEvents.Any(e => GetTick(e) == tickSinceLoad);
         }
     }
 }

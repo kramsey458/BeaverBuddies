@@ -1,5 +1,34 @@
 # BeaverBuddies
 
+## Stability fork — Preview 4
+
+This fork contains the cumulative stability changes through **1.1.0-stability.4**,
+based on [thomaswp/BeaverBuddies](https://github.com/thomaswp/BeaverBuddies)'s
+`v1.1` branch at `a13b1f20dacb6e30efa967cc8ac83e73779c0755`.
+It was built against Timberborn **1.1.2.4**. The fork owner has confirmed that
+Preview 4 resolved the reported multiplayer badtide desync in their playtest.
+This is not a guarantee against every possible desync or mod interaction.
+
+Preview 4 corrects a depth-limited water source that used render-frame duration
+to advance gameplay state. It uses the configured simulation tick interval in
+multiplayer instead. Earlier improvements cover animation crashes, network
+packet handling, random-state scopes, save-state cleanup, water-source ordering,
+and local desync diagnostics.
+
+See [STABILITY-CHANGELOG.md](STABILITY-CHANGELOG.md) for the full cumulative
+changelog, installation instructions and validation limits. The original
+project and GPL license are retained; the Workshop and wiki links below refer
+to the upstream project, not this fork's preview builds.
+
+### Tests
+
+The Preview 4 validation run passed **41 checks**: 13 transport/animation checks,
+26 compiled mod/game checks, and two Python snapshot-comparison checks.
+See [StabilityTests/README.md](StabilityTests/README.md) for commands and required
+local game/Harmony assemblies. Those proprietary assemblies are not included.
+
+---
+
 [![Last commit](https://img.shields.io/github/last-commit/thomaswp/BeaverBuddies?label=Last%20commit&color=lightgray)](https://github.com/thomaswp/BeaverBuddies/commits)
 [![License](https://img.shields.io/github/license/thomaswp/BeaverBuddies?label=License&color=gray)](https://github.com/thomaswp/BeaverBuddies/blob/master/License.txt)
 [![Timberborn 1.0](https://img.shields.io/badge/Timberborn_1.0-compatible-peru)](https://mechanistry.com)

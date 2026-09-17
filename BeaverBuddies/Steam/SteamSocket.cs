@@ -35,7 +35,8 @@ namespace BeaverBuddies.Steam
         public readonly CSteamID friendID;
         //public readonly CSteamID lobbyID;
 
-        private readonly ConcurrentQueueWithWait<byte[]> readBuffer = new ConcurrentQueueWithWait<byte[]>();
+        private readonly BlockingCollection<byte[]> readBuffer = new BlockingCollection<byte[]>();
+        private byte[] currentPacket;
         private int readOffset = 0;
 
         private SteamPacketListener packetListener;
@@ -66,32 +67,34 @@ namespace BeaverBuddies.Steam
         public void Close()
         {
             Connected = false;
+            readBuffer.CompleteAdding();
             packetListener?.UnregisterSocket(this);
         }
 
         public int Read(byte[] buffer, int offset, int count)
         {
-            // Block until we've read something
-            byte[] result;
-            while (!readBuffer.WaitAndTryDequeue(out result)) { }
-            int bytesToCopy = Math.Min(count, result.Length - readOffset);
-            Array.Copy(result, readOffset, buffer, offset, bytesToCopy);
-            if (result.Length > bytesToCopy)
-            {
-                // This will fail we ever receive multiple messages in a single packet.
-                // I don't think that can happen right now unless Steam merges packets, which
-                // seems not to happen... but we should log a more useful
-                // warning. And right now the "readOffset" should always be 0.
-                Plugin.LogWarning($"SteamSocket read {bytesToCopy} bytes, but {result.Length - bytesToCopy} bytes were left over. This is probably a bug!");
-                readOffset = bytesToCopy;
-            }
-            //Plugin.Log($"SteamSocket receiving {bytesToCopy} bytes");
+            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0 || count < 0 || offset > buffer.Length - count)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (count == 0 || !Connected) return 0;
 
+            while (currentPacket == null)
+            {
+                if (!readBuffer.TryTake(out currentPacket, Timeout.Infinite)) return 0;
+                readOffset = 0;
+                if (currentPacket.Length == 0) currentPacket = null;
+            }
+            if (!Connected) return 0;
+            int bytesToCopy = Math.Min(count, currentPacket.Length - readOffset);
+            Array.Copy(currentPacket, readOffset, buffer, offset, bytesToCopy);
+            readOffset += bytesToCopy;
+            if (readOffset == currentPacket.Length) currentPacket = null;
             return bytesToCopy;
         }
 
         public void Write(byte[] buffer, int offset, int count)
         {
+            if (!Connected) throw new IOException("Steam socket is closed.");
             if (count > MaxChunkSize)
             {
                 throw new IOException($"Attempted to write {buffer.Length} bytes, which exceeds the max chunk size of {MaxChunkSize} bytes.");
@@ -104,12 +107,23 @@ namespace BeaverBuddies.Steam
                 buffer = newBuffer;
             }
             Plugin.Log($"SteamSocket sending {count} bytes");
-            SteamNetworking.SendP2PPacket(friendID, buffer, (uint)count, EP2PSend.k_EP2PSendReliable);
+            if (!SteamNetworking.SendP2PPacket(friendID, buffer, (uint)count, EP2PSend.k_EP2PSendReliable))
+            {
+                throw new IOException("Steam could not queue a reliable packet.");
+            }
         }
 
         public void ReceiveData(byte[] data)
         {
-            readBuffer.Enqueue(data);
+            if (!Connected) return;
+            try
+            {
+                readBuffer.Add(data);
+            }
+            catch (InvalidOperationException)
+            {
+                // Close may complete the queue while a packet is being delivered.
+            }
         }
     }
 }

@@ -9,7 +9,15 @@ namespace BeaverBuddies.Fixes
 {
     public class LateTickableBuffer : RegisteredSingleton
     {
+        private readonly ITickService tickService;
         private List<TickableComponent> buffer = new List<TickableComponent>();
+
+        public LateTickableBuffer(ITickService tickService)
+        {
+            this.tickService = tickService;
+        }
+
+        internal float TickIntervalInSeconds => tickService.TickIntervalInSeconds;
 
         public static bool TickingLate { get; private set; } = false;
 

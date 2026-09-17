@@ -39,6 +39,7 @@ namespace BeaverBuddies.DesyncDetecter
     public class DesyncDetecterService : RegisteredSingleton, IResettableSingleton
     {
         private static int currentTick;
+        internal static int CurrentTick => currentTick;
         private static readonly List<List<Trace>> traces = new List<List<Trace>>();
         private static List<Trace> CurrentTrace { get { return traces.Last(); } }
 
@@ -53,6 +54,7 @@ namespace BeaverBuddies.DesyncDetecter
 
         public void Reset()
         {
+            WaterDiagnostics.Reset();
             currentTick = -1;
             lastDesyncTrace = null;
             traces.Clear();

@@ -13,12 +13,16 @@ namespace BeaverBuddies.Steam
 
         public void RegisterSocket(SteamSocket socket)
         {
-            sockets[socket.friendID] = socket;
+            lock (sockets) sockets[socket.friendID] = socket;
         }
 
         public void UnregisterSocket(SteamSocket socket)
         {
-            sockets.Remove(socket.friendID);
+            lock (sockets)
+            {
+                if (sockets.TryGetValue(socket.friendID, out var current) && ReferenceEquals(current, socket))
+                    sockets.Remove(socket.friendID);
+            }
         }
 
         public void Update()
@@ -45,9 +49,12 @@ namespace BeaverBuddies.Steam
                     //    Plugin.Log("Data: " + CompressionUtils.Decompress(buffer));
                     //}
 
-                    if (sockets.ContainsKey(remoteSteamID))
+                    SteamSocket socket;
+                    lock (sockets) sockets.TryGetValue(remoteSteamID, out socket);
+                    if (socket != null)
                     {
-                        sockets[remoteSteamID].ReceiveData(buffer);
+                        if (bytesRead != buffer.Length) Array.Resize(ref buffer, (int)bytesRead);
+                        socket.ReceiveData(buffer);
                     }
                     else
                     {

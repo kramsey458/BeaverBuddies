@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SourceRoot Condition="'$(SourceRoot)' == ''">..</SourceRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SourceRoot)/TimberNet/TimberNet.csproj" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamSocket.cs" Link="SteamSocket.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamPacketListener.cs" Link="SteamPacketListener.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/ISteamPacketReceiver.cs" Link="ISteamPacketReceiver.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Fixes/AnimationFixes.cs" Link="AnimationFixes.cs" />
+  </ItemGroup>
+</Project>

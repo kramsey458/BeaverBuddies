@@ -55,6 +55,7 @@ namespace BeaverBuddies.IO
         private void CleanUp()
         {
             if (NetBase == null) return;
+            NetBase.Close();
             NetBase.OnMapReceived -= mapReceivedCallback;
             NetBase.OnLog -= Plugin.Log;
             NetBase = null;

@@ -66,7 +66,22 @@ private void Update(float deltaTime)
             }
 
             // Use the interpolated time
+            // The game's follower only searches forward from its cached corner.
+            // Our interpolated clock can move backwards at a tick boundary, so
+            // reselect the segment instead of extrapolating from a later corner.
+            __instance._animatedPathFollower._nextCornerIndex = 0;
             __instance._animatedPathFollower.Update(time);
+
+            Vector3 position = __instance._animatedPathFollower.CurrentPosition;
+            if (float.IsNaN(position.x) || float.IsInfinity(position.x) ||
+                float.IsNaN(position.y) || float.IsInfinity(position.y) ||
+                float.IsNaN(position.z) || float.IsInfinity(position.z))
+            {
+                // Do not pass an invalid visual position to swimming/water-map
+                // listeners. Restore the simulation position, leaving its path
+                // and the simulation itself unchanged.
+                __instance._animatedPathFollower.CurrentPosition = __instance.Transform.position;
+            }
 
             // Otherwise, update as usual
             if (!__instance._animatedPathFollower.Stopped)

@@ -256,6 +256,9 @@ namespace BeaverBuddies.DesyncDetecter
             if (!Settings.Debug) return;
 
             var columns = __instance._threadSafeWaterColumns;
+            WaterDiagnostics.Capture(__instance, DesyncDetecterService.CurrentTick);
+            DesyncDetecterService.Trace(WaterDiagnostics.Describe(columns,
+                __instance._threadSafeColumnCounts, __instance._verticalStride));
             int hash = 13;
             foreach (var level in columns)
             {

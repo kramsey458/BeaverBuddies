@@ -72,7 +72,7 @@ namespace BeaverBuddies.Steam
                 //Plugin.Log("User " + name + " has joined the lobby.");
 
                 var socket = new SteamSocket(userJoined, true);
-                steamPacketListener.RegisterSocket(socket);
+                socket.RegisterSteamPacketListener(steamPacketListener);
                 joiningUsers.Enqueue(socket);
             }
         }

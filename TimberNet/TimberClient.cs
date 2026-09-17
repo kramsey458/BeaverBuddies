@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace TimberNet
 {
@@ -17,6 +18,7 @@ namespace TimberNet
     {
 
         private readonly ISocketStream client;
+        private int connectionFailed;
 
         public override bool ShouldTick => base.ShouldTick && receivedEvents.Count > 0;
 
@@ -30,6 +32,13 @@ namespace TimberNet
             // Don't actually do the event (i.e. add it to the hash)
             // Wait for the server to confirm w/ adjusted Tick
             SendEvent(client, message);
+        }
+
+        protected override void HandleConnectionFailure(ISocketStream stream, string message)
+        {
+            if (IsStopped || Interlocked.Exchange(ref connectionFailed, 1) != 0) return;
+            Close();
+            QueueError(message);
         }
 
         protected override void ProcessReceivedEvent(JObject message)

@@ -127,6 +127,7 @@ namespace BeaverBuddies
 
         public void Reset()
         {
+            GameSaverSavePatcher.IsSaving = false;
             IsNonGameplay = false;
             IsTicking = false;
             activeNonGamePatchers.Clear();
@@ -147,6 +148,7 @@ namespace BeaverBuddies
 
         public static T GetNonGameRandom<T>(Func<T> getter)
         {
+            bool wasNonGameplay = IsNonGameplay;
             IsNonGameplay = true;
             try
             {
@@ -154,7 +156,7 @@ namespace BeaverBuddies
             }
             finally
             {
-                IsNonGameplay = false;
+                IsNonGameplay = wasNonGameplay;
             }
         }
 
@@ -434,18 +436,30 @@ namespace BeaverBuddies
 
         public bool TryGetEnumerableElement<T>(IEnumerable<T> source, out T randomElement)
         {
+            bool wasNonGameplay = DeterminismService.IsNonGameplay;
             DeterminismService.IsNonGameplay = true;
-            bool result = baseGenerator.TryGetEnumerableElement<T>(source, out randomElement);
-            DeterminismService.IsNonGameplay = false;
-            return result;
+            try
+            {
+                return baseGenerator.TryGetEnumerableElement<T>(source, out randomElement);
+            }
+            finally
+            {
+                DeterminismService.IsNonGameplay = wasNonGameplay;
+            }
         }
 
         public bool TryGetListElement<T>(IReadOnlyList<T> list, out T randomElement)
         {
+            bool wasNonGameplay = DeterminismService.IsNonGameplay;
             DeterminismService.IsNonGameplay = true;
-            bool result = baseGenerator.TryGetListElement<T>(list, out randomElement);
-            DeterminismService.IsNonGameplay = false;
-            return result;
+            try
+            {
+                return baseGenerator.TryGetListElement<T>(list, out randomElement);
+            }
+            finally
+            {
+                DeterminismService.IsNonGameplay = wasNonGameplay;
+            }
         }
     }
 
@@ -722,9 +736,16 @@ namespace BeaverBuddies
             }
             replayService.FinishFullTickIfNeededAndThen(() =>
             {
+                bool wasSaving = IsSaving;
                 IsSaving = true;
-                original(instance, queuedSave);
-                IsSaving = false;
+                try
+                {
+                    original(instance, queuedSave);
+                }
+                finally
+                {
+                    IsSaving = wasSaving;
+                }
             });
         }
     }
@@ -733,11 +754,19 @@ namespace BeaverBuddies
     public class AutosaverCreateExitSavePatcher
     {
 
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
             // Go straight to saving since we're going to exit
             // and don't need to keep clients in sync
+            __state = GameSaverSavePatcher.IsSaving;
             GameSaverSavePatcher.IsSaving = true;
+        }
+
+        // A finalizer also runs if creating the exit save throws. Preserve an
+        // enclosing save scope, rather than leaving this process-wide flag set.
+        static void Finalizer(bool __state)
+        {
+            GameSaverSavePatcher.IsSaving = __state;
         }
     }
 
@@ -843,6 +872,11 @@ namespace BeaverBuddies
                 }
                 id = Guid.NewGuid();
             }
+            if (__instance._entityRegistry.GetEntity(id) != null)
+            {
+                throw new InvalidOperationException("Unable to generate a unique entity ID after 100 attempts.");
+            }
+            entitySetupBuilder._id = id;
             TickingService ts = GetSingleton<TickingService>();
             if (ts != null)
             {
