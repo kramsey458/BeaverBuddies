@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TimberNet;
 using static TimberNet.TimberNetBase;
 
@@ -29,7 +29,8 @@ namespace BeaverBuddies.IO
 
             TryRegisterSteamPacketReceiver(socket);
 
-            NetBase = new TimberClient(socket);
+            NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity() };
+            NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnMapReceived += mapReceivedCallback;
             NetBase.OnLog += Plugin.Log;
             NetBase.OnError += (error) =>
@@ -37,7 +38,7 @@ namespace BeaverBuddies.IO
                 Plugin.LogError(error);
                 CleanUp();
                 FailedToConnect = true;
-                onError(error);
+                if (!ReplayService.HasReplayFailure) onError(error);
             };
             try
             {

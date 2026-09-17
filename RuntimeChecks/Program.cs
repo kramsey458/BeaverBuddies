@@ -93,6 +93,7 @@ Test("Scene reset clears a stale saving flag", () =>
     if ((bool)saving.GetValue(null)) throw new Exception("Saving flag survived scene reset");
 });
 saving.SetValue(null, false);
+ScopeChecks.Run(assembly, Test);
 WaterChecks.Run(assembly, Test);
 TimingChecks.Run(assembly, Test);
 Console.WriteLine($"{total-failures}/{total} passed");

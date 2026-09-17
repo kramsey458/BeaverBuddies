@@ -55,6 +55,13 @@ namespace BeaverBuddies.Connect
         // there's a real issue, rather than corrupting, but I don't know...
         public bool SaveRehostFile(Action<SaveReference> callback, bool waitUntilAccessible)
         {
+            if (ReplayService.HasReplayFailure)
+            {
+                _dialogBoxShower.Create()
+                    .SetMessage("This session stopped after a failed multiplayer action. Return to the main menu and reload a known-good save before rehosting.")
+                    .SetDefaultCancelButton().Show();
+                return false;
+            }
             if (waitUntilAccessible)
             {
                 Action<SaveReference> originalCallback = callback;

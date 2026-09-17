@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -25,14 +25,14 @@ namespace TimberNet
         private Func<Task<byte[]>> mapProvider;
         private Func<JObject>? initEventProvider;
 
-        public int ClientCount => clients.Count;
+        public int ClientCount { get { lock (queuedMessages) return clients.Count; } }
 
         private string? errorMessage = null;
         public bool IsAcceptingClients => errorMessage == null;
 
         public List<string?> GetConnectedClients()
         {
-            return clients.Select(c => c.Name).ToList();
+            lock (queuedMessages) return clients.Select(c => c.Name).ToList();
         }
 
         public TimberServer(ISocketListener listener, Func<Task<byte[]>> mapProvider, Func<JObject>? initEventProvider)
@@ -81,28 +81,34 @@ namespace TimberNet
                     }
                     Task.Run(async () =>
                     {
-                        if (!IsAcceptingClients)
+                        try
                         {
-                            SendErrorMessage(client);
-                            client.Close();
-                            return;
-                        }
+                            if (!IsAcceptingClients)
+                            {
+                                SendErrorMessage(client);
+                                client.Close();
+                                return;
+                            }
 
-                        await SendMap(client);
-                        SendState(client);
-                        if (initEventProvider != null)
-                        {
-                            JObject initEvent = initEventProvider();
-                            // Send the event before finishing queueing
-                            // so it is guaranteed to arrive first.
-                            // (This also sends it to other clients.)
-                            DoUserInitiatedEvent(initEvent, true);
-                        }
-                        FinishQueuing(client);
+                            if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, true);
+                            if (IsStopped || !IsAcceptingClients) { client.Close(); return; }
+                            await SendMap(client);
+                            SendState(client);
+                            if (initEventProvider != null)
+                            {
+                                JObject initEvent = initEventProvider();
+                                // Send the event before finishing queueing
+                                // so it is guaranteed to arrive first.
+                                // (This also sends it to other clients.)
+                                DoUserInitiatedEvent(initEvent, true);
+                            }
+                            FinishQueuing(client);
 
-                        // This must come last - it is an infinite loop
-                        // until the client disconnects
-                        StartListening(client, false);
+                            // This must come last - it is an infinite loop
+                            // until the client disconnects
+                            StartListening(client, false);
+                        }
+                        catch (Exception error) { HandleConnectionFailure(client, "Connection rejected: " + error.Message); }
                     });
                 }
             });
@@ -117,6 +123,7 @@ namespace TimberNet
         {
             lock (queuedMessages)
             {
+                if (IsStopped) { client.Close(); throw new IOException("Session closed while joining."); }
                 queuedMessages.TryAdd(client, new ConcurrentQueue<JObject>());
                 clients.Add(client);
             }
@@ -194,18 +201,17 @@ namespace TimberNet
 
         private void SendEventToClients(JObject message, bool sendNow)
         {
-            for (int i = 0; i < clients.Count; i++)
-            {
-                if (!clients[i].Connected)
-                {
-                    clients.RemoveAt(i);
-                    i--;
-                }
-            }
-            // Make sure we're not running this while a client is being
-            // setup to start or stop queueing
             lock (queuedMessages)
             {
+                for (int i = clients.Count - 1; i >= 0; i--)
+                {
+                    if (!clients[i].Connected)
+                    {
+                        queuedMessages.TryRemove(clients[i], out _);
+                        clients.RemoveAt(i);
+                    }
+                }
+                // Share the join/close lock across enumeration and mutation.
                 clients.ForEach(client =>
                 {
                     if (sendNow)
@@ -234,12 +240,22 @@ namespace TimberNet
             }
         }
 
+        public override void AbortSession(string reason)
+        {
+            try
+            {
+                lock (queuedMessages)
+                    foreach (var client in clients.ToArray()) SendSessionFault(client, reason);
+            }
+            finally { Close(); }
+        }
+
         public override void Close()
         {
             base.Close();
             try
             {
-                clients.ForEach(client => client.Close());
+                lock (queuedMessages) clients.ForEach(client => client.Close());
             }
             catch (Exception e)
             {

@@ -1,4 +1,4 @@
-﻿using BeaverBuddies.Connect;
+using BeaverBuddies.Connect;
 using BeaverBuddies.DesyncDetecter;
 using BeaverBuddies.Editor;
 using BeaverBuddies.Events;
@@ -100,7 +100,7 @@ namespace BeaverBuddies
     [HarmonyPatch]
     public class Plugin : IModStarter
     {
-        public static readonly string Version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        public static readonly string Version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? Assembly.GetExecutingAssembly().GetName().Version.ToString();
         public const string Name = "BeaverBuddies";
         public const string ID = "beaverbuddies";
 

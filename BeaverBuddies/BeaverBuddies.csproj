@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Import system-specific properties -->
   <Import Project="env.props" Condition="Exists('env.props')" />
@@ -17,7 +17,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>BeaverBuddies</AssemblyName>
     <Description>TimberModTest</Description>
-    <Version>1.1.0-stability.4</Version>
+    <Version>1.1.0-stability.5</Version>
     <TimberbornTargetVersion>1.1</TimberbornTargetVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>

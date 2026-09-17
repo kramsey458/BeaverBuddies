@@ -121,8 +121,8 @@ namespace BeaverBuddies
         public static bool IsTicking = false;
         public static bool IsNonGameplay = false;
         private static System.Random random = new System.Random();
-        private static HashSet<Type> activeNonGamePatchers = new HashSet<Type>();
-        private static HashSet<Type> activeGamePatchers = new HashSet<Type>();
+        private static Dictionary<Type, int> activeNonGamePatchers = new Dictionary<Type, int>();
+        private static Dictionary<Type, int> activeGamePatchers = new Dictionary<Type, int>();
         private static int? nextSeedOnLoad;
 
         public void Reset()
@@ -266,10 +266,14 @@ namespace BeaverBuddies
         {
             if (active)
             {
-                return activeNonGamePatchers.Add(patcherType);
+                activeNonGamePatchers.TryGetValue(patcherType, out int depth);
+                activeNonGamePatchers[patcherType] = depth + 1;
+                return depth == 0;
             }
             else
             {
+                if (!activeNonGamePatchers.TryGetValue(patcherType, out int depth)) return false;
+                if (depth > 1) { activeNonGamePatchers[patcherType] = depth - 1; return false; }
                 return activeNonGamePatchers.Remove(patcherType);
             }
         }
@@ -278,10 +282,14 @@ namespace BeaverBuddies
         {
             if (active)
             {
-                return activeGamePatchers.Add(patcherType);
+                activeGamePatchers.TryGetValue(patcherType, out int depth);
+                activeGamePatchers[patcherType] = depth + 1;
+                return depth == 0;
             }
             else
             {
+                if (!activeGamePatchers.TryGetValue(patcherType, out int depth)) return false;
+                if (depth > 1) { activeGamePatchers[patcherType] = depth - 1; return false; }
                 return activeGamePatchers.Remove(patcherType);
             }
         }
@@ -544,57 +552,64 @@ namespace BeaverBuddies
         //private static Random.State state;
 
         // Just as a test, muck random sounds!
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(InputPatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            //Random.state = state;
-            DeterminismService.SetNonGamePatcherActive(typeof(InputPatcher), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(InputPatcher), false);
         }
     }
 
     [HarmonyPatch(typeof(Sounds), nameof(Sounds.GetRandomSound))]
     public class SoundsPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(SoundsPatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetNonGamePatcherActive(typeof(SoundsPatcher), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(SoundsPatcher), false);
         }
     }
 
     [HarmonyPatch(typeof(SoundEmitter), nameof(SoundEmitter.Update))]
     public class SoundEmitterPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(SoundEmitter), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetNonGamePatcherActive(typeof(SoundEmitter), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(SoundEmitter), false);
         }
     }
 
     [HarmonyPatch(typeof(DateSalter), nameof(DateSalter.GenerateRandomNumber))]
     public class DateSalterPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(DateSalterPatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetNonGamePatcherActive(typeof(DateSalterPatcher), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(DateSalterPatcher), false);
         }
     }
 
@@ -604,84 +619,96 @@ namespace BeaverBuddies
     [HarmonyPatch(typeof(BeaverNameService), nameof(BeaverNameService.RandomName))]
     public class BeaverNameServiceRandomNamePatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetGamePatcherActive(typeof(BeaverNameServiceRandomNamePatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetGamePatcherActive(typeof(BeaverNameServiceRandomNamePatcher), false);
+            if (__state) DeterminismService.SetGamePatcherActive(typeof(BeaverNameServiceRandomNamePatcher), false);
         }
     }
 
     [HarmonyPatch(typeof(PlantableDescriber), nameof(PlantableDescriber.GetPreviewFromTemplate))]
     public class PlantableDescriberPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(PlantableDescriberPatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetNonGamePatcherActive(typeof(PlantableDescriberPatcher), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(PlantableDescriberPatcher), false);
         }
     }
 
     [HarmonyPatch(typeof(StockpileGoodPileVisualizer), nameof(StockpileGoodPileVisualizer.Awake))]
     public class StockpileGoodPileVisualizerPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(StockpileGoodPileVisualizerPatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetNonGamePatcherActive(typeof(StockpileGoodPileVisualizerPatcher), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(StockpileGoodPileVisualizerPatcher), false);
         }
     }
 
     [HarmonyPatch(typeof(LoopingSoundPlayer), nameof(LoopingSoundPlayer.PlayLooping))]
     public class LoopingSoundPlayerPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(LoopingSoundPlayerPatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetNonGamePatcherActive(typeof(LoopingSoundPlayerPatcher), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(LoopingSoundPlayerPatcher), false);
         }
     }
 
     [HarmonyPatch(typeof(BotManufactoryAnimationController), nameof(BotManufactoryAnimationController.ResetRingRotation))]
     public class BotManufactoryAnimationControllerPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(BotManufactoryAnimationControllerPatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetNonGamePatcherActive(typeof(BotManufactoryAnimationControllerPatcher), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(BotManufactoryAnimationControllerPatcher), false);
         }
     }
 
     [HarmonyPatch(typeof(TerrainBlockRandomizer), nameof(TerrainBlockRandomizer.PickVariation))]
     public class TerrainBlockRandomizerPickVariationPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool __state)
         {
+            __state = false;
             DeterminismService.SetNonGamePatcherActive(typeof(TerrainBlockRandomizerPickVariationPatcher), true);
+            __state = true;
         }
 
-        static void Postfix()
+        static void Finalizer(bool __state)
         {
-            DeterminismService.SetNonGamePatcherActive(typeof(TerrainBlockRandomizerPickVariationPatcher), false);
+            if (__state) DeterminismService.SetNonGamePatcherActive(typeof(TerrainBlockRandomizerPickVariationPatcher), false);
         }
     }
 
@@ -774,13 +801,14 @@ namespace BeaverBuddies
     [HarmonyPatch(typeof(Ticker), nameof(Ticker.Update))]
     public class TickerPatcher
     {
-        static void Prefix()
+        static void Prefix(out bool? __state)
         {
+            __state = DeterminismService.IsTicking;
             DeterminismService.IsTicking = true;
         }
-        static void Postfix()
+        static void Finalizer(bool? __state)
         {
-            DeterminismService.IsTicking = false;
+            if (__state.HasValue) DeterminismService.IsTicking = __state.Value;
         }
     }
 

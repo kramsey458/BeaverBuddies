@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,6 +18,14 @@ namespace TimberNet
     public abstract class TimberNetBase
     {
         public const int HEADER_SIZE = 4;
+        public string? CompatibilityIdentity { get; set; }
+        public event MessageReceived? OnSessionFault;
+        private readonly ConcurrentQueue<string> sessionFaults = new ConcurrentQueue<string>();
+        public virtual void AbortSession(string reason) { Close(); }
+        protected void SendSessionFault(ISocketStream stream, string reason)
+        {
+            SendEvent(stream, new JObject { [TYPE_KEY] = "SessionFault", [TICKS_KEY] = TickCount, ["reason"] = reason });
+        }
         public const string TICKS_KEY = "ticksSinceLoad";
         public const string TYPE_KEY = "type";
         public const string SET_STATE_EVENT = "SetState";
@@ -290,6 +298,12 @@ namespace TimberNet
                 byte[] buffer = client.ReadUntilComplete(messageLength);
 
                 string message = BufferToStringMessage(buffer);
+                var control = JObject.Parse(message);
+                if ((string?)control[TYPE_KEY] == "SessionFault")
+                {
+                    sessionFaults.Enqueue("A peer could not replay a multiplayer action. Reload a known-good save before rehosting.");
+                    return;
+                }
                 //Log($"Queuing message of length {messageLength} bytes");
                 receivedEventQueue.Enqueue(message);
                 messageCount++;
@@ -404,6 +418,7 @@ namespace TimberNet
         public void Update()
         {
             ProcessLogs();
+            while (sessionFaults.TryDequeue(out string? fault)) OnSessionFault?.Invoke(fault);
             // UI subscribers must only run on the caller's update thread.
             while (errorQueue.TryDequeue(out string? error)) OnError?.Invoke(error);
             if (!Started || IsStopped) return;

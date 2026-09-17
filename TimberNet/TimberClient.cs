@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,9 +58,23 @@ namespace TimberNet
                 throw new ConnectionFailureException();
             }
             // Connect a TCP socket at the address
-            Task.Run(() => StartListening(client, true));
+            Task.Run(() =>
+            {
+                try
+                {
+                    if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, false);
+                    if (!IsStopped) StartListening(client, true);
+                }
+                catch (Exception error) { HandleConnectionFailure(client, error.Message); }
+            });
         }
 
+
+        public override void AbortSession(string reason)
+        {
+            try { SendSessionFault(client, reason); }
+            finally { Close(); }
+        }
 
         public override void Close()
         {

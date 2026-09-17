@@ -4,6 +4,40 @@ Based on upstream BeaverBuddies `v1.1` commit
 `a13b1f20dacb6e30efa967cc8ac83e73779c0755`. All previews are cumulative.
 Preview 4 was built against Timberborn 1.1.2.4.
 
+## Preview 5 — 1.1.0-stability.5
+
+- Negotiate compatibility before requesting or loading the shared map. Compare
+  the running game version, full mod version, and loaded BeaverBuddies/TimberNet
+  module IDs. Replacing files without restarting cannot disguise an old process.
+- Reject older previews and mismatched binaries. Bound the compatibility wait
+  to 15 seconds, close failed connections, and report an update/restart message.
+- Stop replay after a failed action, discard pending actions, pause the session,
+  notify connected peers, and restore the replay flag even if error handling
+  throws. Block further simulation and rehosting until the scene is reloaded;
+  the affected player is told to reload a known-good save.
+- Make the remaining ten RNG classification patches exception-safe. Count
+  nested calls instead of using simple set membership. Restore the ticker's
+  prior RNG classification in a finalizer, including nested updates.
+- Keep the ordinary RNG check enabled regardless of detailed logging settings.
+- Synchronize client-list access during joins, broadcasts and shutdown.
+
+Both players must install the same compiled archive and fully restart the game.
+Independently compiled binaries may have different module IDs and be rejected.
+This checks the game and BeaverBuddies binaries, not every third-party mod or its
+settings. No changes to Housing Optimize, evaporation, district fallbacks, or
+animation timing are included in this preview.
+
+Validation: 64 passing checks (23 transport/replay/animation, 39 compiled-mod/game,
+two Python snapshot comparisons), plus a successful Release Steam build against
+Timberborn 1.1.2.4. The compiled scope checks exercise the production prefix and
+finalizer methods. An additional attempt to install Harmony on a managed test
+fixture failed because the installed MonoMod dependency could not access
+SignatureHelper.GetMethodSigHelper under .NET 8; that integration check remains
+opt-in and is not counted as passing. The fork owner subsequently confirmed Preview 5 works well in their two-player
+playtest. A failure stop contains partial state; it does not roll back the action
+or recover unsaved progress. Peer notification is best-effort if the connection
+has already failed.
+
 ## Preview 4 — 1.1.0-stability.4
 
 - Replace the render-frame clock in `WaterDepthStrengthModifier.GetStrengthModifier`
@@ -79,7 +113,7 @@ seconds rather than local frame duration, so its timing can differ from upstream
 1. Fully close Timberborn on both computers.
 2. Extract the preview build into the actual `Documents/Timberborn/Mods` directory,
    replacing the prior `BeaverBuddies-StabilityPreview` files.
-3. Enable **BeaverBuddies - Stability Preview**, version **1.1.0-stability.4**, on
+3. Enable **BeaverBuddies - Stability Preview**, version **1.1.0-stability.5**, on
    both computers. Disable Workshop BeaverBuddies and duplicate local previews.
 4. Test a copied save. Both players must use the same preview.
 

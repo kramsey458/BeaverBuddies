@@ -1,5 +1,18 @@
 # Stability regression checks
 
+Preview 5 adds fragmented-stream handshake tests for matching, mismatched and
+legacy peers, timeout cleanup, and failure notification in both directions.
+The production ReplayExecution helper is tested with partial mutation, an error
+handler that also throws, and early-stop/nested-scope cases.
+
+RuntimeChecks also invokes all ten production RNG scope prefixes/finalizers
+with nesting and cleanup, and checks restoration of the ticker flag. To attempt
+actual Harmony patch installation on a managed fixture, set
+`BEAVERBUDDIES_TEST_HARMONY=1`. This optional integration test fails under the
+current .NET 8 harness because the installed MonoMod dependency cannot access
+SignatureHelper.GetMethodSigHelper. It is not counted in the 64 passing checks;
+live Unity/Harmony installation and two-player playtesting remain outstanding.
+
 Run `dotnet run --project StabilityTests` from the repository root with .NET 8.
 This builds TimberNet and links the production SteamSocket, SteamPacketListener,
 and animation patch source. Steam and Unity APIs are test doubles; no game or

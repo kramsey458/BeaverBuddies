@@ -1,4 +1,4 @@
-﻿using BeaverBuddies.IO;
+using BeaverBuddies.IO;
 using System;
 using Timberborn.BaseComponentSystem;
 using Timberborn.Buildings;
@@ -113,6 +113,7 @@ namespace BeaverBuddies.Events
         {
             // If we're already replaying events, just let the original method run.
             // This handles nested calls (e.g., Replay() calls Unlock() which triggers this prefix again)
+            if (ReplayService.HasReplayFailure) return false;
             if (ReplayService.IsReplayingEvents) return true;
 
             // If the replay service is not available, just use default behavior

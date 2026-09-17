@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="$(SourceRoot)/TimberNet/TimberNet.csproj" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/ReplayExecution.cs" Link="ReplayExecution.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamSocket.cs" Link="SteamSocket.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamPacketListener.cs" Link="SteamPacketListener.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/ISteamPacketReceiver.cs" Link="ISteamPacketReceiver.cs" />

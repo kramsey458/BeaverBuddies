@@ -1,4 +1,4 @@
-﻿// Define to force game to run a full tick each
+// Define to force game to run a full tick each
 // update, rather than amortizing ticks over multiple.
 //#define ONE_TICK_PER_UPDATE
 
@@ -109,6 +109,7 @@ namespace BeaverBuddies
 
         public float TargetSpeed  { get; private set; } = 0;
         public bool IsDesynced { get; private set; } = false;
+        public static bool HasReplayFailure { get; private set; }
 
         private ConcurrentQueue<ReplayEvent> eventsToSend = new ConcurrentQueue<ReplayEvent>();
         private ConcurrentQueue<ReplayEvent> eventsToPlay = new ConcurrentQueue<ReplayEvent>();
@@ -140,6 +141,7 @@ namespace BeaverBuddies
         {
             Plugin.Log("Resetting Replay Service...");
             IsLoaded = false;
+            HasReplayFailure = false;
             IsReplayingEvents = false;
             isReset = true;
         }
@@ -306,13 +308,12 @@ namespace BeaverBuddies
             }
 
             int currentTick = ticksSinceLoad;
-            IsReplayingEvents = true;
-            for (int i = 0; i < eventsToReplay.Count; i++)
+            ReplayExecution.Run(eventsToReplay, replayEvent =>
             {
-                ReplayEvent replayEvent = eventsToReplay[i];
+                if (HasReplayFailure || IsDesynced || EventIO.IsNull) return false;
                 int eventTime = replayEvent.ticksSinceLoad;
                 if (eventTime > currentTick)
-                    break;
+                    return false;
                 if (eventTime < currentTick)
                 {
                     Plugin.LogWarning($"Event past time: {eventTime} < {currentTick}");
@@ -321,9 +322,8 @@ namespace BeaverBuddies
                 
                 // If this event was played (e.g. on the server) and recorded a 
                 // random state, make sure we're in the same state.
-                // Skip if we're in Debug mode, since we'll get more details
-                // if we look at the full trace.
-                if (!Settings.Debug && replayEvent.randomS0Before != null)
+                // Keep this check independent of detailed logging preferences.
+                if (replayEvent.randomS0Before != null)
                 {
                     int s0 = UnityEngine.Random.state.s0;
                     int randomS0Before = (int)replayEvent.randomS0Before;
@@ -331,27 +331,47 @@ namespace BeaverBuddies
                     {
                         Plugin.LogWarning($"Random state mismatch: {s0:X8} != {randomS0Before:X8}");
                         HandleDesync();
-                        break;
+                        return false;
                     }
                 }
-                try
+                // Only broadcast successful events from an active session.
+                replayEvent.randomS0Before = UnityEngine.Random.state.s0;
+                replayEvent.Replay(this);
+                if (CanAct && !EventIO.SkipRecording)
                 {
-                    // For these events, make sure to record s0 beforehand
-                    replayEvent.randomS0Before = UnityEngine.Random.state.s0;
-                    replayEvent.Replay(this);
-                    // Only send the event if it played successfully and
-                    // the IO says we shouldn't skip recording
-                    if (!EventIO.SkipRecording)
-                    {
-                        EnqueueEventForSending(replayEvent);
-                    }
-                } catch (Exception e)
-                {
-                    Plugin.LogError($"Failed to replay event: {e}");
-                    Plugin.LogError(e.ToString());
+                    EnqueueEventForSending(replayEvent);
                 }
+                return !IsDesynced && !HasReplayFailure && !EventIO.IsNull;
+            }, (replayEvent, error) =>
+            {
+                Plugin.LogError($"Failed to replay event {replayEvent?.type}: {error}");
+                AbortReplay("A multiplayer action could not be completed.");
+            }, active => IsReplayingEvents = active, IsReplayingEvents);
+        }
+
+        public void AbortReplay(string reason)
+        {
+            if (HasReplayFailure) return;
+            HasReplayFailure = true;
+            IsDesynced = true;
+            TargetSpeed = 0;
+            _tickingService.ShouldInterruptTicking = true;
+            eventsToPlay.Clear();
+            eventsToSend.Clear();
+            try
+            {
+                if (io is ServerEventIO server) server.NetBase?.AbortSession(reason);
+                else if (io is ClientEventIO client) client.NetBase?.AbortSession(reason);
             }
-            IsReplayingEvents = false;
+            catch (Exception error) { Plugin.LogError(error.ToString()); }
+            finally
+            {
+                EventIO.Reset();
+                SpeedChangePatcher.SetSpeedSilentlyNow(_speedManager, 0);
+            }
+            GetSingleton<DialogBoxShower>().Create()
+                .SetMessage(reason + "\n\nMultiplayer has stopped because this action may have changed only part of the game state. Return to the main menu and reload a known-good save before rehosting. Do not overwrite your good save with this session.")
+                .SetDefaultCancelButton().Show();
         }
 
         public void HandleDesync()
@@ -456,6 +476,7 @@ namespace BeaverBuddies
                 waitUpdates = -1;
             }
             io.Update();
+            if (!CanAct) return;
             // Only replay events on Update if we're paused by the user.
             // Also only send events if paused, so the client doesn't play
             // then before the end of the tick.
@@ -625,6 +646,13 @@ namespace BeaverBuddies
 
         internal void OnTickingCompleted()
         {
+            if (ReplayService.HasReplayFailure)
+            {
+                // Never run a deferred save/rehost callback from an aborted tick.
+                onCompletedFullTick.Clear();
+                ShouldCompleteFullTick = false;
+                return;
+            }
             // Interruptions are always temporary and get reset at the end of
             // each ticking update
             ShouldInterruptTicking = false;
@@ -642,7 +670,7 @@ namespace BeaverBuddies
         {
 
             // Don't tick if we've been interrupted by a forced pause
-            if (ShouldInterruptTicking) return false;
+            if (ReplayService.HasReplayFailure || ShouldInterruptTicking) return false;
 
             // Don't tick if we've set the game speed to 0 (paused)
             if (replayService.TargetSpeed == 0) return false;
@@ -755,6 +783,7 @@ namespace BeaverBuddies
     {
         static bool Prefix(TickableBucketService __instance, int numberOfBucketsToTick)
         {
+            if (ReplayService.HasReplayFailure) return false;
             if (EventIO.IsNull) return true;
             TickingService ts = GetSingleton<TickingService>();
             if (ts == null) return true;
