@@ -30,6 +30,7 @@ namespace BeaverBuddies.IO
             TryRegisterSteamPacketReceiver(socket);
 
             NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity() };
+            NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnMapReceived += mapReceivedCallback;
             NetBase.OnLog += Plugin.Log;

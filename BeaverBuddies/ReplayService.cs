@@ -261,8 +261,8 @@ namespace BeaverBuddies
             if (IsReplayingEvents) return;
             if (!IsLoaded) return;
 
-            string json = JsonSettings.Serialize(replayEvent);
-            Plugin.Log($"RecordEvent: {json}");
+            if (Settings.Debug && Settings.VerboseLogging)
+                Plugin.Log($"RecordEvent: {JsonSettings.Serialize(replayEvent)}");
 
             UserEventBehavior behavior = UserEventBehavior.Send;
             EventIO io = EventIO.Get();
@@ -563,7 +563,8 @@ namespace BeaverBuddies
             io?.Update();
 
             // IO Complete for Tick
-            Plugin.Log($"Tick {ticksSinceLoad:D5} IO done; " +
+            if (Settings.Debug && Settings.VerboseLogging)
+                Plugin.Log($"Tick {ticksSinceLoad:D5} IO done; " +
                 $"Order hash: {TEBPatcher.EntityUpdateHash:X8}; " +
                 $"Move hash: {TEBPatcher.PositionHash:X8}; " +
                 $"Random s0: {UnityEngine.Random.state.s0:X8}");

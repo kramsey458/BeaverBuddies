@@ -19,6 +19,8 @@ namespace TimberNet
     {
         public const int HEADER_SIZE = 4;
         public string? CompatibilityIdentity { get; set; }
+        public Func<bool>? DetailedLoggingEnabled { get; set; }
+        protected bool ShouldLogDetails => DetailedLoggingEnabled?.Invoke() == true;
         public event MessageReceived? OnSessionFault;
         private readonly ConcurrentQueue<string> sessionFaults = new ConcurrentQueue<string>();
         public virtual void AbortSession(string reason) { Close(); }
@@ -39,7 +41,7 @@ namespace TimberNet
         public event MessageReceived? OnError;
         public event MapReceived? OnMapReceived;
 
-        private readonly ConcurrentQueue<string> receivedEventQueue = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<JObject> receivedEventQueue = new ConcurrentQueue<JObject>();
         private readonly ConcurrentQueue<string> logQueue = new ConcurrentQueue<string>();
         private readonly ConcurrentQueue<string> errorQueue = new ConcurrentQueue<string>();
         private byte[]? mapBytes = null;
@@ -112,28 +114,32 @@ namespace TimberNet
         protected void InsertInScript(JObject message, List<JObject> script)
         {
             int tick = GetTick(message);
-            int index = script.FindIndex(m => GetTick(m) > tick);
-
-            if (index == -1)
+            // The common path is already in tick order. Equal ticks append,
+            // preserving the host's action order.
+            if (script.Count == 0 || GetTick(script[script.Count - 1]) <= tick)
+            {
                 script.Add(message);
-            else
-                script.Insert(index, message);
+                return;
+            }
+            int low = 0, high = script.Count;
+            while (low < high)
+            {
+                int middle = low + (high - low) / 2;
+                if (GetTick(script[middle]) <= tick) low = middle + 1;
+                else high = middle;
+            }
+            script.Insert(low, message);
         }
 
         public static List<T> PopEventsForTick<T>(int tick, List<T> events, Func<T, int> getTick)
         {
-            List<T> list = new List<T>();
-            while (events.Count > 0)
-            {
-                T message = events[0];
-                int delay = getTick(message);
-                if (delay > tick)
-                    break;
-
-                events.RemoveAt(0);
-                list.Add(message);
-            }
-            return list;
+            int count = 0;
+            while (count < events.Count && getTick(events[count]) <= tick) count++;
+            if (count == 0) return new List<T>();
+            var ready = events.GetRange(0, count);
+            // Shift the remaining backlog once, rather than once per event.
+            events.RemoveRange(0, count);
+            return ready;
         }
 
         private List<JObject> PopEventsToProcess(List<JObject> events)
@@ -173,7 +179,7 @@ namespace TimberNet
             {
                 AddToHash(message.ToString());
             }
-            Log($"Event: {GetType(message)}");
+            if (ShouldLogDetails) Log($"Event: {GetType(message)}");
         }
 
         protected void SendLength(ISocketStream stream, int length)
@@ -208,7 +214,7 @@ namespace TimberNet
 
         protected void SendEvent(ISocketStream client, JObject message)
         {
-            Log($"Sending: {GetType(message)} for tick {GetTick(message)}");
+            if (ShouldLogDetails) Log($"Sending: {GetType(message)} for tick {GetTick(message)}");
             byte[] buffer = MessageToBuffer(message);
 
             try
@@ -305,7 +311,7 @@ namespace TimberNet
                     return;
                 }
                 //Log($"Queuing message of length {messageLength} bytes");
-                receivedEventQueue.Enqueue(message);
+                receivedEventQueue.Enqueue(control);
                 messageCount++;
             }
         }
@@ -376,11 +382,11 @@ namespace TimberNet
 
         private void ProcessReceivedEventsQueue()
         {
-            while (receivedEventQueue.TryDequeue(out string? message))
+            while (receivedEventQueue.TryDequeue(out JObject? message))
             {
                 try
                 {
-                    ReceiveEvent(JObject.Parse(message));
+                    ReceiveEvent(message);
                 } catch (Exception e)
                 {
                     Log($"Error receiving event: {e.Message}");

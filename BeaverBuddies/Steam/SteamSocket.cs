@@ -1,4 +1,4 @@
-﻿using Steamworks;
+using Steamworks;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -106,7 +106,7 @@ namespace BeaverBuddies.Steam
                 Array.Copy(buffer, offset, newBuffer, 0, count);
                 buffer = newBuffer;
             }
-            Plugin.Log($"SteamSocket sending {count} bytes");
+            if (Settings.Debug && Settings.VerboseLogging) Plugin.Log($"SteamSocket sending {count} bytes");
             if (!SteamNetworking.SendP2PPacket(friendID, buffer, (uint)count, EP2PSend.k_EP2PSendReliable))
             {
                 throw new IOException("Steam could not queue a reliable packet.");

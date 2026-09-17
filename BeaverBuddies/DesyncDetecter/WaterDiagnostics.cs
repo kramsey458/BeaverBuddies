@@ -48,16 +48,25 @@ namespace BeaverBuddies.DesyncDetecter
         {
                 long size = (long)columns.Length * 24 + counts.Length;
                 if (size > MaxBytes) return;
+                Snapshot snapshot = null;
                 while (snapshots.Count > 0 && (snapshots.Count >= 4 || bytes + size > MaxBytes))
-                    bytes -= snapshots.Dequeue().Bytes;
-                var snapshot = new Snapshot
                 {
-                    Tick = tick,
-                    Stride = stride,
-                    VerticalStride = verticalStride,
-                    Columns = (ReadOnlyWaterColumn[])columns.Clone(),
-                    Counts = (byte[])counts.Clone()
-                };
+                    var evicted = snapshots.Dequeue();
+                    bytes -= evicted.Bytes;
+                    if (evicted.Columns.Length == columns.Length && evicted.Counts.Length == counts.Length)
+                        snapshot = evicted;
+                }
+                if (snapshot == null)
+                    snapshot = new Snapshot
+                    {
+                        Columns = new ReadOnlyWaterColumn[columns.Length],
+                        Counts = new byte[counts.Length]
+                    };
+                snapshot.Tick = tick;
+                snapshot.Stride = stride;
+                snapshot.VerticalStride = verticalStride;
+                Array.Copy(columns, snapshot.Columns, columns.Length);
+                Array.Copy(counts, snapshot.Counts, counts.Length);
                 snapshots.Enqueue(snapshot);
                 bytes += snapshot.Bytes;
         }

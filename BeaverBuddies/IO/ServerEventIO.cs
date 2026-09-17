@@ -80,6 +80,7 @@ namespace BeaverBuddies.IO
             }
             //netBase = new TimberServer(port, mapProvider, null);
             NetBase.CompatibilityIdentity = BuildCompatibility.CreateIdentity();
+            NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnLog += Plugin.Log;
             NetBase.OnMapReceived += NetBase_OnClientConnected;

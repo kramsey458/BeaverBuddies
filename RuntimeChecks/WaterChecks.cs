@@ -128,7 +128,11 @@ internal static class WaterChecks
         {
             InvokeDiagnostic("Reset");
             var columns = Columns(0.125f); var counts = new byte[]{1,0};
-            for (int tick = 1; tick <= 6; tick++) InvokeDiagnostic("CaptureData", columns, counts, tick, 2, 2);
+            for (int tick = 1; tick <= 6; tick++)
+            {
+                var changing = columns.GetValue(0); Set(changing,"WaterDepth",tick * 0.125f); columns.SetValue(changing,0);
+                InvokeDiagnostic("CaptureData", columns, counts, tick, 2, 2);
+            }
             var c = columns.GetValue(0); Set(c, "WaterDepth", 99f); columns.SetValue(c, 0); counts[0] = 0;
             string dir = Path.Combine(Path.GetTempPath(), "BeaverBuddies-water-tests-" + Guid.NewGuid().ToString("N"));
             string path = (string)InvokeDiagnostic("WriteArchive", dir);
@@ -144,10 +148,46 @@ internal static class WaterChecks
                     if (reader.ReadInt32()!=2 || reader.ReadInt32()!=2 || reader.ReadInt32()!=2 || reader.ReadInt32()!=2)
                         throw new Exception("Wrong dimensions");
                     if (reader.ReadByte()!=1 || reader.ReadByte()!=0 || reader.ReadByte()!=0 || reader.ReadByte()!=32 ||
-                        reader.ReadInt32()!=BitConverter.SingleToInt32Bits(0.125f)) throw new Exception("Snapshot changed after capture");
+                        reader.ReadInt32()!=BitConverter.SingleToInt32Bits(tick * 0.125f)) throw new Exception("Snapshot changed after capture");
                 }
             }
             File.Delete(path); Directory.Delete(dir);
+            InvokeDiagnostic("Reset");
+        });
+        test("Steady-state diagnostic captures reuse arrays and bound allocations", () =>
+        {
+            InvokeDiagnostic("Reset");
+            var columns = Array.CreateInstance(readonlyColumnType,262144);
+            var counts = new byte[65536];
+            object[] captureArgs = {columns,counts,1,256,65536};
+            var capture=diagnostics.GetMethod("CaptureData",All);
+            for(int i=0;i<4;i++) capture.Invoke(null,captureArgs);
+            long start=GC.GetAllocatedBytesForCurrentThread();
+            for(int i=0;i<16;i++) capture.Invoke(null,captureArgs);
+            long optimized=GC.GetAllocatedBytesForCurrentThread()-start;
+            start=GC.GetAllocatedBytesForCurrentThread();
+            for(int i=0;i<16;i++) { GC.KeepAlive(columns.Clone()); GC.KeepAlive(counts.Clone()); }
+            long baseline=GC.GetAllocatedBytesForCurrentThread()-start;
+            Console.WriteLine($"  Snapshot allocation, 16 captures after warm-up: old clones {baseline:N0} bytes; optimized {optimized:N0} bytes (262,144 columns)");
+            if(optimized > 65536 || baseline < 1048576) throw new Exception("Map-sized steady-state allocations remain");
+            InvokeDiagnostic("Reset");
+        });
+        test("Snapshot recycling handles map size changes within retention budget", () =>
+        {
+            InvokeDiagnostic("Reset");
+            foreach(int size in new[] {2,2,2,2,4,4,2,4})
+                InvokeDiagnostic("CaptureData",Array.CreateInstance(readonlyColumnType,size),new byte[size],size,2,size);
+            var retained=(IEnumerable)diagnostics.GetField("snapshots",All).GetValue(null);
+            var entries=retained.Cast<object>().ToArray();
+            if(entries.Length!=4) throw new Exception("Snapshot count changed");
+            foreach(var entry in entries)
+            {
+                int tick=(int)entry.GetType().GetField("Tick",All).GetValue(entry);
+                var columns=(Array)entry.GetType().GetField("Columns",All).GetValue(entry);
+                if(columns.Length!=tick) throw new Exception("Reused incompatible buffer");
+            }
+            long bytes=(long)diagnostics.GetField("bytes",All).GetValue(null);
+            if(bytes>64L*1024*1024) throw new Exception("Budget exceeded");
             InvokeDiagnostic("Reset");
         });
     }

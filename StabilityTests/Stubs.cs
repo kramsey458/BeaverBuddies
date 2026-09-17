@@ -81,3 +81,5 @@ namespace Timberborn.CharacterMovementSystem
         public void UpdateRotation() { }
     }
 }
+
+namespace BeaverBuddies { public static class Settings { public static bool Debug; public static bool VerboseLogging = true; } }

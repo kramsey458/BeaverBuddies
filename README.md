@@ -1,13 +1,16 @@
 # BeaverBuddies
 
-## Stability fork — Preview 5
+## Stability fork — Preview 6
 
-This fork contains the cumulative stability changes through **1.1.0-stability.5**,
+This fork contains the cumulative stability changes through **1.1.0-stability.6**,
 based on [thomaswp/BeaverBuddies](https://github.com/thomaswp/BeaverBuddies)'s
 `v1.1` branch at `a13b1f20dacb6e30efa967cc8ac83e73779c0755`.
 It was built against Timberborn **1.1.2.4**. The fork owner has confirmed that
 Preview 4 resolved the reported multiplayer badtide desync in their playtest.
 This is not a guarantee against every possible desync or mod interaction.
+
+Preview 6 reduces diagnostic allocations, event-backlog processing, duplicate
+JSON parsing and routine logging overhead. The fork owner confirmed Preview 6 works well in multiplayer playtesting.
 
 Preview 5 adds build compatibility checking, stops replay after failed actions,
 and makes remaining RNG scopes exception-safe. The fork owner has confirmed Preview 5 works well in their two-player playtest.
@@ -25,8 +28,8 @@ to the upstream project, not this fork's preview builds.
 
 ### Tests
 
-The Preview 5 validation run passed **64 checks**: 23 transport/replay/animation
-checks, 39 compiled mod/game checks, and two Python snapshot-comparison checks.
+The Preview 6 validation run passed **71 checks**: 28 transport/replay/animation
+checks, 41 compiled mod/game checks, and two Python snapshot-comparison checks.
 The optional live Harmony-installation fixture is not included in that count;
 see the changelog for its test-runtime limitation.
 See [StabilityTests/README.md](StabilityTests/README.md) for commands and required

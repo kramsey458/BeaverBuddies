@@ -44,7 +44,7 @@ namespace TimberNet
         protected override void ProcessReceivedEvent(JObject message)
         {
             base.ProcessReceivedEvent(message);
-            Log($"Received event: {message[TYPE_KEY]?.ToString() ?? "<null>"}");
+            if (ShouldLogDetails) Log($"Received event: {message[TYPE_KEY]?.ToString() ?? "<null>"}");
             AddEventToHash(message);
         }
 
