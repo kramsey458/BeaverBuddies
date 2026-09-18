@@ -9,7 +9,7 @@ namespace TimberNet
     public static class CompatibilityHandshake
     {
         private const string Prefix = "BeaverBuddies requires matching Preview 5 or newer builds. Restart both games after updating.\nBB-HANDSHAKE-1\n";
-        private const int MaxIdentityBytes = 4096;
+        private const int MaxIdentityBytes = 128 * 1024;
 
         public static void Run(ISocketStream stream, string identity, bool server, int timeoutMilliseconds = 15000)
         {
@@ -25,8 +25,8 @@ namespace TimberNet
                 {
                     Write(stream, Prefix + identity, true);
                     string remote = Read(stream, false);
-                    if (!string.Equals(remote, identity, StringComparison.Ordinal))
-                        throw new IOException("Multiplayer build mismatch. Both players must install the same archive and restart Timberborn.");
+                    string? difference = CompatibilityProfile.Difference(identity, remote, false);
+                    if (difference != null) throw new IOException(difference);
                     Write(stream, "OK", false);
                 }
                 else
@@ -34,8 +34,8 @@ namespace TimberNet
                     string hello = Read(stream, true);
                     if (!hello.StartsWith(Prefix, StringComparison.Ordinal)) throw new IOException(hello);
                     string remote = hello.Substring(Prefix.Length);
-                    if (!string.Equals(remote, identity, StringComparison.Ordinal))
-                        throw new IOException($"Multiplayer build mismatch. Install the same archive and restart both games.\nHost: {remote}\nClient: {identity}");
+                    string? difference = CompatibilityProfile.Difference(remote, identity, false);
+                    if (difference != null) throw new IOException(difference);
                     Write(stream, identity, false);
                     if (Read(stream, false) != "OK") throw new IOException("Host did not accept multiplayer compatibility.");
                 }
@@ -65,7 +65,7 @@ namespace TimberNet
                 throw new IOException("The host is running an older BeaverBuddies build without compatibility checking. Update both players to the same preview and restart.");
             int length = ReadLength(stream);
             if (length <= 0 || length > MaxIdentityBytes) throw new IOException("Invalid multiplayer compatibility response.");
-            return CompressionUtils.Decompress(stream.ReadUntilComplete(length));
+            return CompressionUtils.Decompress(stream.ReadUntilComplete(length), CompatibilityProfile.MaxCharacters + 1024);
         }
 
         private static void Write(ISocketStream stream, string message, bool marker)

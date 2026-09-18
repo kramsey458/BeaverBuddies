@@ -115,6 +115,7 @@ namespace BeaverBuddies.Events
             // This handles nested calls (e.g., Replay() calls Unlock() which triggers this prefix again)
             if (ReplayService.HasReplayFailure) return false;
             if (ReplayService.IsReplayingEvents) return true;
+            if (ReplayService.IsLoaded && !ReplayService.CompatibilityReady && !DeterminismService.IsTicking) return false;
             if (ReplayService.IsLoaded && BeaverBuddies.Connect.SnapshotResyncService.Active && !DeterminismService.IsTicking) return false;
 
             // If the replay service is not available, just use default behavior
@@ -143,7 +144,10 @@ namespace BeaverBuddies.Events
                 // If this is happening to a non-entity (e.g. prefab),
                 // just let the base method handle it
                 if (entityID == null) return null;
-                return doRecord(entityID);
+                var message = doRecord(entityID);
+                if (message != null && component.HasComponent<Building>())
+                    BeaverBuddies.Activity.PlayerActivityService.NotifyLocalEdit(entityID);
+                return message;
             });
         }
     }

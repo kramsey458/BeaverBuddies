@@ -118,7 +118,7 @@ var tests = new (string Name, Action Run)[]
         finally { BeaverBuddies.IO.EventIO.IsNull = false; }
     })
 };
-tests = tests.Concat(Preview5Checks.Tests()).Concat(PerformanceChecks.Tests()).Concat(SendingChecks.Tests()).Concat(TcpRecoveryChecks.Tests()).ToArray();
+tests = tests.Concat(Preview5Checks.Tests()).Concat(PerformanceChecks.Tests()).Concat(SendingChecks.Tests()).Concat(TcpRecoveryChecks.Tests()).Concat(ActivityChecks.Tests()).Concat(CompatibilityDiagnosticsChecks.Tests()).ToArray();
 foreach (var test in tests)
 {
     try

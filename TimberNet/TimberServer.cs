@@ -17,6 +17,36 @@ namespace TimberNet
     {
 
         private readonly List<ISocketStream> clients = new List<ISocketStream>();
+        readonly ConcurrentDictionary<ISocketStream, int> activityIds = new ConcurrentDictionary<ISocketStream, int>();
+        int nextActivityId;
+
+        protected override void QueueActivity(ISocketStream stream, PlayerActivity activity)
+        {
+            // Identity belongs to the connection, never to the peer-supplied name or player field.
+            if (activityIds.TryGetValue(stream, out int id)) base.QueueActivity(stream, activity.WithPlayerId(id));
+        }
+        protected override void ProcessActivity(PlayerActivity activity)
+        {
+            if (!activityIds.Any(pair => pair.Value == activity.PlayerId && pair.Key.Connected)) return;
+            base.ProcessActivity(activity);
+            BroadcastActivity(activity);
+        }
+        public override void SendActivity(PlayerActivity activity) => BroadcastActivity(activity.WithPlayerId(0));
+        void BroadcastActivity(PlayerActivity activity)
+        {
+            lock (queuedMessages)
+            {
+                foreach (var peer in clients)
+                    if (peer.Connected && !queuedMessages.ContainsKey(peer) &&
+                        activityIds.TryGetValue(peer, out int id) && id != activity.PlayerId)
+                        SendActivityTo(peer, activity);
+            }
+        }
+        protected override void HandleConnectionFailure(ISocketStream stream, string message)
+        {
+            activityIds.TryRemove(stream, out _);
+            base.HandleConnectionFailure(stream, message);
+        }
         private readonly ConcurrentDictionary<ISocketStream, ConcurrentQueue<string>> queuedMessages =
             new ConcurrentDictionary<ISocketStream, ConcurrentQueue<string>>();
 
@@ -32,6 +62,7 @@ namespace TimberNet
         private Func<JObject>? initEventProvider;
 
         public ISocketStream[] GetConnections() { lock (queuedMessages) return clients.Where(c => c.Connected).ToArray(); }
+        protected override IEnumerable<object> AdmissionPeers => GetConnections();
 
         public int ClientCount { get { lock (queuedMessages) return clients.Count(client => client.Connected); } }
 
@@ -142,9 +173,10 @@ namespace TimberNet
         {
             lock (queuedMessages)
             {
-                if (IsStopped) { client.Close(); throw new IOException("Session closed while joining."); }
+                if (IsStopped || !IsAcceptingClients) { client.Close(); throw new IOException("Session closed to new joins."); }
                 queuedMessages.TryAdd(client, new ConcurrentQueue<string>());
                 clients.Add(client);
+                activityIds.TryAdd(client, System.Threading.Interlocked.Increment(ref nextActivityId));
             }
         }
 
@@ -180,6 +212,7 @@ namespace TimberNet
 
         private async Task SendMap(ISocketStream client)
         { 
+            StartQueuing(client);
             Task<byte[]> task = mapProvider();
             Log("Waiting for map...");
             byte[] mapBytes = await task;
@@ -189,7 +222,7 @@ namespace TimberNet
             // them on the client side.
             // Start recording messages as soon as the map is saved,
             // while the map is sending
-            StartQueuing(client);
+            SnapshotDigest = DigestSnapshot(mapBytes);
 
             Log($"Sending map with length {mapBytes.Length}");
             SendDataWithLength(client, mapBytes);
@@ -228,6 +261,7 @@ namespace TimberNet
                     if (!clients[i].Connected)
                     {
                         queuedMessages.TryRemove(clients[i], out _);
+                        activityIds.TryRemove(clients[i], out _);
                         clients.RemoveAt(i);
                     }
                 }

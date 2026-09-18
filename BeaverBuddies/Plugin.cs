@@ -37,6 +37,7 @@ namespace BeaverBuddies
             containerDefinition.Bind<SteamOverlayConnectionService>().AsSingleton();
             containerDefinition.Bind<RegisteredLocalizationService>().AsSingleton();
             containerDefinition.Bind<Settings>().AsSingleton();
+            containerDefinition.Bind<BuildCompatibility>().AsSingleton();
 
             MultiStartConfigurator.Configure(containerDefinition);
 
@@ -57,9 +58,12 @@ namespace BeaverBuddies
             containerDefinition.Bind<ReportingService>().AsSingleton();
             containerDefinition.Bind<LateTickableBuffer>().AsSingleton();
             containerDefinition.Bind<BeaverBuddies.Ping.PingService>().AsSingleton();
+            containerDefinition.Bind<BeaverBuddies.Activity.PlayerActivityService>().AsSingleton();
             // We can safely add this regardless of whether tracing is enabled
             // because it will only trace if the config is set to do so.
             containerDefinition.Bind<DesyncDetecterService>().AsSingleton();
+            containerDefinition.Bind<RollingDiagnosticsService>().AsSingleton();
+            containerDefinition.Bind<CompatibilityStatus>().AsSingleton();
 
         }
     }
@@ -83,6 +87,7 @@ namespace BeaverBuddies
             containerDefinition.Bind<RegisteredLocalizationService>().AsSingleton();
             containerDefinition.Bind<MultiplayerMapMetadataService>().AsSingleton();
             containerDefinition.Bind<Settings>().AsSingleton();
+            containerDefinition.Bind<BuildCompatibility>().AsSingleton();
 
             //new ReportingService().PostDesync("test").ContinueWith(result => Plugin.Log($"Posted: {result.Result}"));
             containerDefinition.Bind<SteamOverlayConnectionService>().AsSingleton();

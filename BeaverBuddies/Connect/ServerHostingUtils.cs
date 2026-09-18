@@ -147,7 +147,13 @@ namespace BeaverBuddies.Connect
 
             ServerEventIO io = new ServerEventIO();
             EventIO.Set(io);
-            io.Start(data);
+            try { io.Start(data); }
+            catch (Exception error)
+            {
+                EventIO.Reset();
+                shower.Create().SetMessage(error.Message).SetDefaultCancelButton().Show();
+                return;
+            }
 
             var behavior = GetMonoBehaviour(sceneLoader._sceneLoader);
             Coroutine coroutine = null;

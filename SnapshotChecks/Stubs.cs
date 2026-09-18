@@ -52,7 +52,7 @@ namespace BeaverBuddies
         public void RecordEvent(Events.SpeedSetEvent value) { Recorded.Add(value); }
     }
 }
-namespace BeaverBuddies.DesyncDetecter { public static class WaterDiagnostics { public static void WriteOnDesync() { } } }
+namespace BeaverBuddies.DesyncDetecter { public static class WaterDiagnostics { public static void WriteOnDesync() { } } public static class RollingDiagnosticsService { public static void Trigger(string reason) { } } }
 namespace BeaverBuddies.Events { public class SpeedSetEvent { public float speed; } }
 namespace BeaverBuddies.IO
 {

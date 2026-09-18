@@ -25,6 +25,7 @@ namespace TimberNet
         volatile bool draining;
         protected bool CloseDeferred => draining;
         public Task FlushAsync() => Task.WhenAll(senders.Values.Select(s => s.Drain()));
+        public int PendingReliableMessages => senders.Values.Sum(s => s.PendingMessages);
         public void CloseAfterFlush()
         {
             if (draining || IsStopped) return;
@@ -37,8 +38,38 @@ namespace TimberNet
         }
         public static JObject Control(string command) => new JObject { [TYPE_KEY] = "SessionControl", ["command"] = command };
         public virtual void SendControl(JObject message) { }
+        readonly ActivityMailbox activityInbox = new ActivityMailbox();
+        public event Action<PlayerActivity>? OnActivity;
+        public virtual void SendActivity(PlayerActivity activity) { }
+        protected virtual void QueueActivity(ISocketStream stream, PlayerActivity activity) => activityInbox.Put(activity, ActivityMailbox.Now);
+        protected virtual void ProcessActivity(PlayerActivity activity) => OnActivity?.Invoke(activity);
+        protected void SendActivityTo(ISocketStream stream, PlayerActivity activity)
+        {
+            if (IsStopped || !stream.Connected) return;
+            SenderFor(stream).EnqueueLatest(activity.PlayerId, activity.ToJson().ToString(Newtonsoft.Json.Formatting.None));
+        }
+        OrderedSender SenderFor(ISocketStream stream) => senders.GetOrAdd(stream, socket => new OrderedSender(
+            text => SendDataWithLength(socket, MessageToBuffer(text)),
+            error => HandleConnectionFailure(socket, "Error sending event: " + error.Message)));
 
         public string? CompatibilityIdentity { get; set; }
+        CompatibilityAdmission? admission;
+        DateTime? loadedAt;
+        public string? LoadedCompatibilityIdentity { get; private set; }
+        public string? SnapshotDigest { get; protected set; }
+        public bool RequiresLoadedCompatibility => CompatibilityIdentity?.StartsWith("{", StringComparison.Ordinal) == true;
+        protected virtual IEnumerable<object> AdmissionPeers => Array.Empty<object>();
+        public bool CompatibilityVerified => !RequiresLoadedCompatibility || (admission?.Ready(AdmissionPeers) == true);
+        CompatibilityAdmission Admission => admission ??= new CompatibilityAdmission(this is TimberServer,
+            (peer, message) => { if (peer is ISocketStream stream) SendEvent(stream, message); else SendControl(message); },
+            reason => { OnSessionFault?.Invoke(reason); if (!IsStopped) AbortSession(reason); });
+        public void SubmitLoadedCompatibility(string identity)
+        {
+            if (!RequiresLoadedCompatibility) return;
+            loadedAt = DateTime.UtcNow;
+            LoadedCompatibilityIdentity = identity;
+            Admission.Loaded(identity);
+        }
         public Func<bool>? DetailedLoggingEnabled { get; set; }
         protected bool ShouldLogDetails => DetailedLoggingEnabled?.Invoke() == true;
         public event MessageReceived? OnSessionFault;
@@ -85,7 +116,7 @@ namespace TimberNet
 
         public bool Started { get; private set; }
 
-        public virtual bool ShouldTick => Started && !IsStopped;
+        public virtual bool ShouldTick => Started && !IsStopped && CompatibilityVerified;
 
         protected List<JObject> receivedEvents = new List<JObject>();
 
@@ -93,6 +124,7 @@ namespace TimberNet
         {
             if (draining) return;
             isStopped = true;
+            activityInbox.Clear();
             foreach (var sender in senders.Values) sender.Stop();
         }
 
@@ -246,9 +278,7 @@ namespace TimberNet
             try
             {
                 // Snapshot JSON before returning to callers; compression and writes run on the worker.
-                senders.GetOrAdd(client, stream => new OrderedSender(
-                    text => SendDataWithLength(stream, MessageToBuffer(text)),
-                    error => HandleConnectionFailure(stream, "Error sending event: " + error.Message))).Enqueue(json);
+                SenderFor(client).Enqueue(json);
             }
             catch (Exception error) { HandleConnectionFailure(client, error.Message); }
         }
@@ -334,9 +364,17 @@ namespace TimberNet
 
                 string message = BufferToStringMessage(buffer);
                 var control = JObject.Parse(message);
+                if ((string?)control[TYPE_KEY] == PlayerActivity.MessageType)
+                {
+                    if (message.Length <= 4096 && PlayerActivity.TryParse(control, out var activity)) QueueActivity(client, activity!);
+                    messageCount++;
+                    continue;
+                }
                 if ((string?)control[TYPE_KEY] == "SessionFault")
                 {
-                    sessionFaults.Enqueue("A peer could not replay a multiplayer action. Reload a known-good save before rehosting.");
+                    string reason = (string?)control["reason"] ?? "A peer could not replay a multiplayer action.";
+                    if (reason.Length > 2048) reason = reason.Substring(0, 2048);
+                    sessionFaults.Enqueue("Peer stopped the session: " + reason);
                     return;
                 }
                 if ((string?)control[TYPE_KEY] == "SessionControl")
@@ -410,6 +448,7 @@ namespace TimberNet
         private void ReceiveFile(ISocketStream stream, int messageLength)
         {
             byte[] mapBytes = stream.ReadUntilComplete(messageLength);
+            SnapshotDigest = DigestSnapshot(mapBytes);
             AddFileToHash(mapBytes);
             Log($"Received map with length {mapBytes.Length} and Hash: {GetHashCode(mapBytes).ToString("X8")}");
             this.mapBytes = mapBytes;
@@ -459,11 +498,20 @@ namespace TimberNet
         public virtual void Update()
         {
             ProcessLogs();
-            while (controls.TryDequeue(out var control)) OnControl?.Invoke(control.Stream, control.Message);
+            while (controls.TryDequeue(out var control))
+                if (!RequiresLoadedCompatibility || !Admission.Receive(control.Stream, control.Message)) OnControl?.Invoke(control.Stream, control.Message);
+            if (!IsStopped && loadedAt.HasValue && !CompatibilityVerified && DateTime.UtcNow - loadedAt.Value > TimeSpan.FromMinutes(10))
+            {
+                loadedAt = null;
+                const string reason = "Timed out waiting for all players to finish loading and verify mod settings. Rehost and try again.";
+                OnSessionFault?.Invoke(reason);
+                if (!IsStopped) AbortSession(reason);
+            }
             while (sessionFaults.TryDequeue(out string? fault)) OnSessionFault?.Invoke(fault);
             // UI subscribers must only run on the caller's update thread.
             while (errorQueue.TryDequeue(out string? error)) OnError?.Invoke(error);
             if (!Started || IsStopped) return;
+            foreach (var activity in activityInbox.Take(ActivityMailbox.Now)) ProcessActivity(activity);
             ProcessReceivedMap();
             ProcessReceivedEventsQueue();
 
@@ -490,7 +538,7 @@ namespace TimberNet
             //if (ticksSinceLoad != TickCount) Log($"Setting ticks from {TickCount} to {ticksSinceLoad}");
             TickCount = ticksSinceLoad;
             Update();
-            if (IsStopped) return new List<JObject>();
+            if (IsStopped || !CompatibilityVerified) return new List<JObject>();
             List<JObject> toProcess = PopEventsToProcess(receivedEvents);
             toProcess.ForEach(e => ProcessReceivedEvent(e));
             return FilterEvents(toProcess);
@@ -500,6 +548,11 @@ namespace TimberNet
         {
             Update();
             return !IsStopped && receivedEvents.Any(e => GetTick(e) == tickSinceLoad);
+        }
+        protected static string DigestSnapshot(byte[] bytes)
+        {
+            using var sha = SHA256.Create();
+            return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
         }
     }
 }

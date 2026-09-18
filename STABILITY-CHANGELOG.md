@@ -10,6 +10,47 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## Preview 11 - 1.1.0-stability.11
+
+- Compare enabled mod IDs, versions, load order, code/data fingerprints and
+  loaded assembly module IDs, plus hashed registered Mod Settings values.
+- Add a second admission check after map load for game-only settings. Hold
+  simulation and patched actions until it passes; show useful mismatch keys and
+  a waiting dialog. Repeat admission after host snapshot recovery.
+- Exclude known local BeaverBuddies preferences; retain the detailed tracing check.
+  Bound compatibility payloads and compressed expansion.
+- Keep rolling diagnostics without detailed tracing: 120 checkpoints at 20-tick
+  intervals, 64 entity and 256 water-column samples per checkpoint, and 256 recent
+  useful command summaries. Include RNG, jobs, inventory reservations, water
+  contamination, command arguments/targets and network context.
+- Coordinate local exports before recovery or replay failure, write reports in
+  the background, and retain ten rolling archives. Recorder failures do not stop
+  multiplayer. Add a comparison utility and COMPATIBILITY-DIAGNOSTICS.md.
+- Include Preview 10 player activity, previously delivered as a local ZIP.
+- 164 automated checks passed; Release Steam build completed with zero errors.
+- Built against Timberborn 1.1.2.4. Live two-player Unity playtesting of the new
+  features remains necessary; automated tests use stubs at native game boundaries.
+
+## Preview 10 - 1.1.0-stability.10 (included in Preview 11)
+
+- Show other players' world cursors at 50% opacity, interpolated between updates,
+  with player names and connection IDs. Reproject onto each player's own camera.
+- Show native outlines for remote selected entities using independent secondary
+  highlighters, preserving local primary selection colors and input behavior.
+- Label selected buildings with **Viewing** and locally initiated building changes
+  with **Editing** for three seconds. These indicators do not lock buildings.
+- Reuse the existing player name/color preferences; add a default-on activity toggle.
+  Hide world cursors over UI/off-map and clear shared activity when unfocused.
+- Add a presentation-only channel for TCP and Steam, capped at ten sends per second.
+  Coalesce old cursor updates, bound incoming/outgoing activity buffers, prioritize
+  gameplay messages, and assign guest identities on the host. Activity never enters
+  replay, simulation RNG, or desync hashes.
+- Clear displays on disconnect, expiry, settings changes, recovery and scene reload.
+- Release Steam build succeeded; 133 automated checks passed (48 transport/replay,
+  12 activity service, 14 snapshot coordinator, 57 compiled mod/game, 2 Python water).
+- Includes all Preview 9 fixes and recovery behavior. Native rendering and a full
+  two-player playtest remain to be verified in Timberborn.
+
 ## Preview 9 - 1.1.0-stability.9
 
 - Queue outgoing events per connection; compress and write on workers. Bound

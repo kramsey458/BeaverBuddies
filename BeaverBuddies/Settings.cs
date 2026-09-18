@@ -73,6 +73,14 @@ namespace BeaverBuddies
             new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.AutomaticSnapshotResync")
                 .SetLocalizedTooltip("BeaverBuddies.Settings.AutomaticSnapshotResync.Tooltip"));
         public static bool SnapshotResyncEnabled => instance?.AutomaticSnapshotResync.Value ?? true;
+        public ModSetting<bool> PlayerActivity { get; } =
+            new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.PlayerActivity")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.PlayerActivity.Tooltip"));
+        public static bool PlayerActivityEnabled => instance?.PlayerActivity.Value ?? true;
+        public ModSetting<bool> RollingDiagnostics { get; } =
+            new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.RollingDiagnostics")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.RollingDiagnostics.Tooltip"));
+        public static bool RollingDiagnosticsEnabled => instance?.RollingDiagnostics.Value ?? true;
 
         // ---- Developer Settings ----
 

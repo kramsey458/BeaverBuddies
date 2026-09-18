@@ -32,6 +32,7 @@ namespace BeaverBuddies.IO
             NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity() };
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
             NetBase.OnControl += (peer, message) => BeaverBuddies.Connect.SnapshotResyncService.Receive(this, peer, message);
+            NetBase.OnControl += (peer, message) => BeaverBuddies.DesyncDetecter.RollingDiagnosticsService.Receive(this, message);
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnMapReceived += mapReceivedCallback;
             NetBase.OnLog += Plugin.Log;
@@ -66,9 +67,19 @@ namespace BeaverBuddies.IO
 
         public static ClientEventIO Create(ISocketStream socket, MapReceived mapReceivedCallback, Action<string> onError)
         {
-            ClientEventIO eventIO = new ClientEventIO(socket, mapReceivedCallback, onError);
-            if (eventIO.FailedToConnect) return null;
-            return eventIO;
+            try
+            {
+                ClientEventIO eventIO = new ClientEventIO(socket, mapReceivedCallback, onError);
+                if (eventIO.FailedToConnect) return null;
+                return eventIO;
+            }
+            catch (Exception error)
+            {
+                socket.Close();
+                onError("Could not verify installed mods: " + error.Message);
+                Plugin.LogError(error.ToString());
+                return null;
+            }
         }
     }
 }

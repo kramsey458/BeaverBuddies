@@ -22,13 +22,19 @@ namespace TimberNet
             }
         }
 
-        public static string Decompress(byte[] compressedData)
+        public static string Decompress(byte[] compressedData, int maxBytes = int.MaxValue)
         {
             using (var input = new MemoryStream(compressedData))
             using (var gzip = new GZipStream(input, CompressionMode.Decompress))
             using (var output = new MemoryStream())
             {
-                gzip.CopyTo(output);
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = gzip.Read(buffer, 0, buffer.Length)) != 0)
+                {
+                    if (output.Length + count > maxBytes) throw new IOException("Compressed message exceeds the allowed size.");
+                    output.Write(buffer, 0, count);
+                }
                 return Encoding.UTF8.GetString(output.ToArray());
             }
         }

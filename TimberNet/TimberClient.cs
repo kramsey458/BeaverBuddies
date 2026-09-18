@@ -21,6 +21,7 @@ namespace TimberNet
         private int connectionFailed;
 
         public override void SendControl(JObject message) => SendEvent(client, message);
+        public override void SendActivity(PlayerActivity activity) => SendActivityTo(client, activity.WithPlayerId(0));
 
         public override bool ShouldTick => base.ShouldTick && receivedEvents.Count > 0;
 

@@ -124,11 +124,15 @@ namespace BeaverBuddies
             {
                 // The client shouldn't tick until the server has sent a heartbeat
                 // Check the *next* tick, since current tick has already happened
-                return !SnapshotResyncService.Active && !(io is ClientEventIO && !io.HasEventsForTick(TicksSinceLoad + 1));
+                return CompatibilityReady && !SnapshotResyncService.Active && !(io is ClientEventIO && !io.HasEventsForTick(TicksSinceLoad + 1));
             }
         }
 
         public static bool IsLoaded { get; private set; } = false;
+        internal static TimberNet.TimberNetBase Network => EventIO.Get() switch {
+            ServerEventIO host => host.NetBase, ClientEventIO guest => guest.NetBase, _ => null
+        };
+        public static bool CompatibilityReady => Network?.CompatibilityVerified ?? true;
         private bool isReset = false;
 
         private bool CanAct => io != null && !isReset && !IsDesynced;
@@ -259,7 +263,8 @@ namespace BeaverBuddies
             // During a replay, we save things manually, only if they're
             // successful.
             if (IsReplayingEvents) return;
-            if (!IsLoaded || IsDesynced || SnapshotResyncService.Active) return;
+            if (!IsLoaded || !CompatibilityReady || IsDesynced || SnapshotResyncService.Active) return;
+            RollingDiagnosticsService.Record(replayEvent, "submitted");
 
             if (Settings.Debug && Settings.VerboseLogging)
                 Plugin.Log($"RecordEvent: {JsonSettings.Serialize(replayEvent)}");
@@ -323,6 +328,7 @@ namespace BeaverBuddies
                 // If this event was played (e.g. on the server) and recorded a 
                 // random state, make sure we're in the same state.
                 // Keep this check independent of detailed logging preferences.
+                RollingDiagnosticsService.Record(replayEvent, "before");
                 if (replayEvent.randomS0Before != null)
                 {
                     int s0 = UnityEngine.Random.state.s0;
@@ -337,6 +343,7 @@ namespace BeaverBuddies
                 // Only broadcast successful events from an active session.
                 replayEvent.randomS0Before = UnityEngine.Random.state.s0;
                 replayEvent.Replay(this);
+                RollingDiagnosticsService.Record(replayEvent, "after");
                 if (CanAct && !EventIO.SkipRecording)
                 {
                     EnqueueEventForSending(replayEvent);
@@ -345,6 +352,7 @@ namespace BeaverBuddies
             }, (replayEvent, error) =>
             {
                 Plugin.LogError($"Failed to replay event {replayEvent?.type}: {error}");
+                RollingDiagnosticsService.Record(replayEvent, "failed");
                 AbortReplay("A multiplayer action could not be completed.");
             }, active => IsReplayingEvents = active, IsReplayingEvents);
         }
@@ -352,6 +360,7 @@ namespace BeaverBuddies
         public void AbortReplay(string reason)
         {
             if (HasReplayFailure) return;
+            RollingDiagnosticsService.Trigger(reason);
             HasReplayFailure = true;
             IsDesynced = true;
             TargetSpeed = 0;
@@ -377,6 +386,7 @@ namespace BeaverBuddies
         public void HandleDesync()
         {
             if (IsDesynced) return;
+            RollingDiagnosticsService.Trigger("desync detected");
             if (SnapshotResyncService.TryRecover(this)) return;
 
             ClientDesyncedEvent e = new ClientDesyncedEvent()
@@ -479,6 +489,8 @@ namespace BeaverBuddies
             DesyncDetecterService.StartTick(ticksSinceLoad);
 
             IsLoaded = true;
+            try { Network?.SubmitLoadedCompatibility(BuildCompatibility.CreateIdentity()); }
+            catch (Exception error) { AbortReplay("Could not verify loaded mod settings: " + error.Message); }
         }
 
         // TODO: Find a better callback way of waiting until initial game
@@ -498,8 +510,9 @@ namespace BeaverBuddies
                 Initialize();
                 waitUpdates = -1;
             }
-            io.Update();
+            io?.Update();
             if (!CanAct || SnapshotResyncService.FreezingOldSession) return;
+            if (!CompatibilityReady) { UpdateSpeed(); return; }
             // Only replay events on Update if we're paused by the user.
             // Also only send events if paused, so the client doesn't play
             // then before the end of the tick.
@@ -555,6 +568,7 @@ namespace BeaverBuddies
         public void DoTick()
         {
             if (!CanAct) return;
+            RollingDiagnosticsService.CaptureBoundary(ticksSinceLoad);
 
             if (Settings.Debug && io.ShouldSendHeartbeat)
             {

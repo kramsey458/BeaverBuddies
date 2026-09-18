@@ -44,6 +44,7 @@ namespace BeaverBuddies.IO
         {
             try
             {
+                string compatibility = BuildCompatibility.CreateIdentity();
                 List<ISocketListener> listeners = [
                     new TCPListenerWrapper(Settings.Port)
                 ];
@@ -74,17 +75,20 @@ namespace BeaverBuddies.IO
                     },
                     CreateInitEvent()
                 );
+                NetBase.CompatibilityIdentity = compatibility;
             }
             catch (Exception e)
             {
                 Plugin.Log("Failed to start server");
                 Plugin.Log(e.ToString());
-                return;
+                NetBase?.Close();
+                SocketListener?.Stop();
+                throw new InvalidOperationException("Could not start a compatible multiplayer session: " + e.Message, e);
             }
             //netBase = new TimberServer(port, mapProvider, null);
-            NetBase.CompatibilityIdentity = BuildCompatibility.CreateIdentity();
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
             NetBase.OnControl += (peer, message) => BeaverBuddies.Connect.SnapshotResyncService.Receive(this, peer, message);
+            NetBase.OnControl += (peer, message) => BeaverBuddies.DesyncDetecter.RollingDiagnosticsService.Receive(this, message);
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnError += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnLog += Plugin.Log;

@@ -91,6 +91,7 @@ namespace BeaverBuddies.Connect
         void BeginHost(ServerEventIO server, ReplayService replay)
         {
             if (Active || replay == null || ReplayService.HasReplayFailure) return;
+            RollingDiagnosticsService.Trigger("host snapshot recovery requested");
             recovery = new Recovery { Id = GuidPatcher.RealNewGuid().ToString("N"), Owner = server,
                 Phase = Phase.FinishingTick, Deadline = Now + 30,
                 Expected = server.NetBase.ClientCount, Speed = replay.TargetSpeed };

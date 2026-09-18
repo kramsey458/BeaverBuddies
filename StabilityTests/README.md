@@ -1,5 +1,14 @@
 # Stability regression checks
 
+Preview 10 adds `ActivityTests` (production activity service with Unity/game test
+doubles) and activity transport checks in `StabilityTests`. Run both using
+`dotnet run --project ActivityTests` and `dotnet run --project StabilityTests`.
+The latter includes a real TCP host with two guests, paused activity relay without
+hash changes, identity checks, bounded coalescing and gameplay queue priority.
+See [PLAYER-ACTIVITY.md](../PLAYER-ACTIVITY.md) for native two-player acceptance tests.
+The complete Preview 10 suite passed 133 checks: 48 StabilityTests, 12 ActivityTests,
+14 SnapshotChecks, 57 RuntimeChecks, and 2 Python water checks.
+
 Preview 5 adds fragmented-stream handshake tests for matching, mismatched and
 legacy peers, timeout cleanup, and failure notification in both directions.
 The production ReplayExecution helper is tested with partial mutation, an error
@@ -48,3 +57,7 @@ Preview 3 water diagnostic ZIPs can be compared with Python (no extra packages):
 python RuntimeChecks/compare_water_snapshots.py host-water.zip client-water.zip
 python -m unittest discover -s RuntimeChecks -p "test_water_snapshots.py"
 ```
+
+## Preview 11 checks
+
+`StabilityTests` includes full-profile validation, post-load admission/rejection over real TCP, bounded rolling report buffers and retention. `dotnet run --project DiagnosticsTests` exercises the production compatibility scanner and sampler with API-shaped game stubs. Run `python -m unittest discover -s RuntimeChecks -p "test_*.py"` for both water and rolling-report comparisons. Native Unity scenes and actual two-player play are not exercised by these harnesses.
