@@ -40,7 +40,7 @@ namespace BeaverBuddies.IO
         public ISocketListener SocketListener { get; private set; }
 
         // We only support a static map; see note above
-        public void Start(byte[] mapBytes)
+        public void Start(byte[] mapBytes, ReconnectTickets tickets = null)
         {
             try
             {
@@ -76,6 +76,7 @@ namespace BeaverBuddies.IO
                     CreateInitEvent()
                 );
                 NetBase.CompatibilityIdentity = compatibility;
+                NetBase.ReconnectTickets = tickets ?? new ReconnectTickets();
             }
             catch (Exception e)
             {
@@ -91,6 +92,7 @@ namespace BeaverBuddies.IO
             NetBase.OnControl += (peer, message) => BeaverBuddies.DesyncDetecter.RollingDiagnosticsService.Receive(this, message);
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnError += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
+            NetBase.OnPeerDisconnected += peer => BeaverBuddies.Connect.SnapshotResyncService.PeerDisconnected(this, peer);
             NetBase.OnLog += Plugin.Log;
             NetBase.OnMapReceived += NetBase_OnClientConnected;
             NetBase.Start();

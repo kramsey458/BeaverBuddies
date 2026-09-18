@@ -19,11 +19,39 @@ namespace TimberNet
 
         private readonly ISocketStream client;
         private int connectionFailed;
+        protected override bool ConnectionKeepAliveEnabled => UseReconnectHandshake;
+        public bool UseReconnectHandshake { get; set; }
+        public string? ReconnectToken { get; set; }
+        public string? RecoveryId { get; private set; }
+        public string? RecoveryDigest { get; private set; }
+        public override void Update()
+        {
+            base.Update();
+            if (UseReconnectHandshake && SnapshotDigest != null && !IsStopped)
+                if (CompatibilityVerified) CheckConnectionSilence(client); else RefreshConnectionSilence(client);
+        }
 
+        volatile bool leaving;
+        public void LeaveSession()
+        {
+            if (IsStopped || leaving) return;
+            leaving = true;
+            SendControl(Control("LeaveSession"));
+            // Let the host consume the leave notice and close first. Closing immediately
+            // after writing can race its outbound worker and be mistaken for a lost peer.
+            _ = Task.Run(async () =>
+            {
+                try { await Task.WhenAny(FlushAsync(), Task.Delay(1000)); await Task.Delay(3000); }
+                finally { leaving = false; Close(); }
+            });
+        }
         public override void SendControl(JObject message) => SendEvent(client, message);
         public override void SendActivity(PlayerActivity activity) => SendActivityTo(client, activity.WithPlayerId(0));
 
         public override bool ShouldTick => base.ShouldTick && receivedEvents.Count > 0;
+        protected override IEnumerable<(ISocketStream Peer, string Label)> TelemetryPeers =>
+            SnapshotDigest != null && client.Connected ? new[] { (client, "Host") } : Array.Empty<(ISocketStream, string)>();
+        public string TransportName => client is TCPClientWrapper ? "Direct IP" : "Steam";
 
         public TimberClient(ISocketStream client) : base()
         {
@@ -39,6 +67,7 @@ namespace TimberNet
 
         protected override void HandleConnectionFailure(ISocketStream stream, string message)
         {
+            if (leaving) { leaving = false; Close(); return; }
             if (IsStopped || Interlocked.Exchange(ref connectionFailed, 1) != 0) return;
             Close();
             QueueError(message);
@@ -62,6 +91,12 @@ namespace TimberNet
                     if (await Task.WhenAny(connect, Task.Delay(3000)) != connect) throw new ConnectionFailureException();
                     await connect;
                     if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, false);
+                    if (!IsStopped && UseReconnectHandshake)
+                    {
+                        var admission = ReconnectHandshake.Guest(client, ReconnectToken);
+                        ReconnectToken = (string?)admission["ticket"];
+                        RecoveryId = (string?)admission["recoveryId"]; RecoveryDigest = (string?)admission["digest"];
+                    }
                     if (!IsStopped) StartListening(client, true);
                 }
                 catch (Exception error) { HandleConnectionFailure(client, error.Message); }
@@ -77,7 +112,7 @@ namespace TimberNet
 
         public override void Close()
         {
-            if (CloseDeferred) return;
+            if (CloseDeferred || leaving) return;
             base.Close();
             client.Close();
         }

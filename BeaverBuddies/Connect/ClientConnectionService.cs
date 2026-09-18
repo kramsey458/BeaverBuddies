@@ -27,6 +27,7 @@ namespace BeaverBuddies.Connect
         private ClientEventIO client;
         private Settings _settings;
         static Func<ISocketStream> reconnectSocket;
+        static string reconnectToken;
         double nextReconnect;
         bool snapshotAttempt;
         static double Now => (double)System.Diagnostics.Stopwatch.GetTimestamp() / System.Diagnostics.Stopwatch.Frequency;
@@ -54,6 +55,7 @@ namespace BeaverBuddies.Connect
 
         public bool TryToConnect(CSteamID friendID)
         {
+            reconnectToken = null;
             reconnectSocket = () => new SteamSocket(friendID);
             return TryToConnect(reconnectSocket());
         }
@@ -97,6 +99,7 @@ namespace BeaverBuddies.Connect
                 }
             }
 
+            reconnectToken = null;
             reconnectSocket = () => new TCPClientWrapper(address, port);
             return TryToConnect(reconnectSocket());
         }
@@ -112,7 +115,7 @@ namespace BeaverBuddies.Connect
                     SnapshotResyncService.ConnectionFailed(error);
                 }
                 else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
-            });
+            }, reconnectToken);
 
             if (client == null)
             {
@@ -200,6 +203,7 @@ namespace BeaverBuddies.Connect
                 // Clean up our current co-op state before loading,
                 // so we don't, for example, end up ticking the client before
                 // it's actually loaded.
+                reconnectToken = client.NetBase?.ReconnectToken;
                 if (!SnapshotResyncService.MapLoading(client, mapBytes)) return;
                 SingletonManager.Reset();
 
@@ -218,7 +222,7 @@ namespace BeaverBuddies.Connect
             catch (Exception error)
             {
                 Plugin.LogError("Could not load the host snapshot: " + error);
-                if (SnapshotResyncService.Active) SnapshotResyncService.ConnectionFailed(error.Message);
+                if (SnapshotResyncService.Active) SnapshotResyncService.ConnectionFailed(error.Message, false);
                 else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error.Message);
             }
         }

@@ -26,6 +26,50 @@ namespace TimberNet
         protected bool CloseDeferred => draining;
         public Task FlushAsync() => Task.WhenAll(senders.Values.Select(s => s.Drain()));
         public int PendingReliableMessages => senders.Values.Sum(s => s.PendingMessages);
+        public long PendingReliableBytes => senders.Values.Sum(s => s.PendingData.Bytes);
+        public int BufferedEventCount => receivedEvents.Count + receivedEventQueue.Count;
+        readonly ConnectionTelemetry telemetry = new ConnectionTelemetry();
+        readonly ConcurrentDictionary<(ISocketStream Peer, bool Reply), JObject> telemetryInbox = new ConcurrentDictionary<(ISocketStream, bool), JObject>();
+        SimulationStatus simulationStatus = new SimulationStatus(0, 0, false, true);
+        double nextTelemetry;
+        protected virtual IEnumerable<(ISocketStream Peer, string Label)> TelemetryPeers => Array.Empty<(ISocketStream, string)>();
+        public void PublishSimulationStatus(SimulationStatus state) => simulationStatus = state;
+        public List<PeerStatus> GetPeerStatus()
+        {
+            var result = new List<PeerStatus>();
+            foreach (var peer in TelemetryPeers)
+            {
+                var status = telemetry.Read(peer.Peer, ConnectionTelemetry.Now); status.Label = peer.Label;
+                if (senders.TryGetValue(peer.Peer, out var sender))
+                { var queued = sender.PendingData; status.QueuedMessages = queued.Messages; status.QueuedBytes = queued.Bytes; }
+                result.Add(status);
+            }
+            return result;
+        }
+        void SendTelemetry(ISocketStream peer, JObject message)
+        {
+            if (!IsStopped && peer.Connected)
+                SenderFor(peer).EnqueueLatest((bool)message["reply"]! ? -2 : -1, message.ToString(Newtonsoft.Json.Formatting.None));
+        }
+        void UpdateTelemetry()
+        {
+            double now = ConnectionTelemetry.Now;
+            if (now >= nextTelemetry)
+            {
+                nextTelemetry = now + .25;
+                var active = new HashSet<object>();
+                foreach (var peer in TelemetryPeers)
+                {
+                    active.Add(peer.Peer);
+                    telemetry.Probe(peer.Peer, now, message => SendTelemetry(peer.Peer, message));
+                }
+                telemetry.Retain(active);
+            }
+            if (telemetryInbox.IsEmpty) return;
+            foreach (var key in telemetryInbox.Keys)
+                if (telemetryInbox.TryRemove(key, out var message))
+                    telemetry.Receive(key.Peer, message, now, simulationStatus, response => SendTelemetry(key.Peer, response));
+        }
         public void CloseAfterFlush()
         {
             if (draining || IsStopped) return;
@@ -125,6 +169,7 @@ namespace TimberNet
             if (draining) return;
             isStopped = true;
             activityInbox.Clear();
+            telemetryInbox.Clear();
             foreach (var sender in senders.Values) sender.Stop();
         }
 
@@ -285,6 +330,7 @@ namespace TimberNet
 
         protected virtual void HandleConnectionFailure(ISocketStream stream, string message)
         {
+            lastInbound.TryRemove(stream, out _);
             // After a partial write the framing cannot safely be reused.
             if (senders.TryRemove(stream, out var sender)) sender.Stop();
             stream.Close();
@@ -312,10 +358,31 @@ namespace TimberNet
             return true;
         }
 
+        protected virtual bool ConnectionKeepAliveEnabled => false;
+        async Task SendConnectionKeepAlives(ISocketStream peer)
+        {
+            // Transport liveness must not depend on Unity updates: a long save or UI hitch
+            // is not a broken network. These disposable frames still yield to gameplay.
+            while (!IsStopped && peer.Connected)
+            {
+                await Task.Delay(3000);
+                if (IsStopped || !peer.Connected) break;
+                SenderFor(peer).EnqueueLatest(-3, "{\"type\":\"ConnectionKeepAlive\"}");
+            }
+        }
+        readonly ConcurrentDictionary<ISocketStream, double> lastInbound = new ConcurrentDictionary<ISocketStream, double>();
+        protected void RefreshConnectionSilence(ISocketStream peer) => lastInbound[peer] = ConnectionTelemetry.Now;
+        protected void CheckConnectionSilence(ISocketStream peer)
+        {
+            if (lastInbound.TryGetValue(peer, out var last) && ConnectionTelemetry.Now - last > 20)
+                HandleConnectionFailure(peer, "No response from the peer for 20 seconds.");
+        }
         protected void StartListening(ISocketStream client, bool isClient)
         {
             try
             {
+                lastInbound[client] = ConnectionTelemetry.Now;
+                if (ConnectionKeepAliveEnabled) _ = SendConnectionKeepAlives(client);
                 ReceiveMessages(client, isClient);
             }
             catch (Exception e)
@@ -348,6 +415,7 @@ namespace TimberNet
                     }
 
                     ReceiveFile(client, messageLength);
+                    lastInbound[client] = ConnectionTelemetry.Now;
                     messageCount++;
                     continue;
                 }
@@ -362,8 +430,18 @@ namespace TimberNet
                 // TODO: How should this fail and not hang if map stops sending?
                 byte[] buffer = client.ReadUntilComplete(messageLength);
 
+                lastInbound[client] = ConnectionTelemetry.Now;
                 string message = BufferToStringMessage(buffer);
                 var control = JObject.Parse(message);
+                if ((string?)control[TYPE_KEY] == "ConnectionKeepAlive") { messageCount++; continue; }
+                if ((string?)control[TYPE_KEY] == ConnectionTelemetry.MessageType)
+                {
+                    // Keep at most one request and reply per peer; never add to replay or its hash.
+                    if (message.Length <= 1024 && ConnectionTelemetry.Valid(control) && telemetryInbox.Count < PlayerActivity.MaxPlayers * 2)
+                        telemetryInbox[(client, (bool)control["reply"]!)] = control;
+                    messageCount++;
+                    continue;
+                }
                 if ((string?)control[TYPE_KEY] == PlayerActivity.MessageType)
                 {
                     if (message.Length <= 4096 && PlayerActivity.TryParse(control, out var activity)) QueueActivity(client, activity!);
@@ -379,6 +457,11 @@ namespace TimberNet
                 }
                 if ((string?)control[TYPE_KEY] == "SessionControl")
                 {
+                    if ((string?)control["command"] == "LeaveSession" && this is TimberServer leavingHost)
+                    {
+                        leavingHost.ReconnectTickets?.Forget(client);
+                        client.Close(); return;
+                    }
                     controls.Enqueue((client, control));
                     messageCount++;
                     continue;
@@ -511,6 +594,7 @@ namespace TimberNet
             // UI subscribers must only run on the caller's update thread.
             while (errorQueue.TryDequeue(out string? error)) OnError?.Invoke(error);
             if (!Started || IsStopped) return;
+            UpdateTelemetry();
             foreach (var activity in activityInbox.Take(ActivityMailbox.Now)) ProcessActivity(activity);
             ProcessReceivedMap();
             ProcessReceivedEventsQueue();

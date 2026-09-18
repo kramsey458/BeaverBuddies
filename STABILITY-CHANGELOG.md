@@ -10,6 +10,46 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## Preview 13 - 1.1.0-stability.13
+
+- Recover unexpected direct-IP disconnects by finishing the host tick, pausing,
+  saving and reloading a shared authoritative snapshot. Retain all Preview 12 work.
+- Allow 30 seconds to reconnect after the new host listener starts; admitted
+  players get a separate loading allowance. Continue with connected players when
+  the window expires, preserving the previous simulation speed (including pause).
+- Show a reconnect countdown and host controls to continue without missing
+  players or cancel recovery. Canceling leaves the world paused.
+- Issue temporary session tickets outside replay so only original participants
+  can claim recovery slots and obtain the new snapshot identity after a lost notice.
+- Detect silent established connections after 20 seconds without incoming frames;
+  suspend the liveness timeout during compatibility/loading admission. Worker
+  keepalives remain active through main-thread saves and UI stalls.
+- Distinguish graceful guest departure from a transport drop. Discard old commands
+  and retain compatibility, snapshot digest, full-tick and initialization checks.
+- Invalidate late save callbacks after cancellation; retry transport interruptions
+  separately from disk or scene-loading failures. Retain the recovery loop guard.
+- Direct-IP recovery only; mixed Steam invite sessions retain manual fallback.
+- Release Steam build completed with zero errors; 210 automated checks passed.
+  Automated validation and live-playtest limitations are documented in
+  RECONNECT-GRACE.md and the packaged release notes.
+
+## Preview 12 - 1.1.0-stability.12 (included in Preview 13)
+
+- Add a compact native HUD for host/guest connection state, application round-trip
+  time, reliable send queue memory/count, received events, buffered ticks, measured
+  simulation tick rate, and approximate per-peer progress.
+- Add collapse and hide controls, pause-menu restore, and persistent local display
+  preferences. Integrate with the normal HUD and its scaling/visibility behavior.
+- Explain compatibility waits, pause/recovery, delayed responses, simulation
+  catch-up and disconnection without labeling every delay as a network fault.
+- Use bounded disposable telemetry, one outstanding probe per peer, main-thread
+  measurements, four UI refreshes per second, and priority for gameplay traffic.
+  Telemetry does not alter replay hashes, RNG, simulation speed or recovery rules.
+- Retain all Preview 11 compatibility, diagnostic and activity behavior.
+- 188 automated checks passed; Release Steam build completed with zero errors
+  against Timberborn 1.1.2.4.
+- Native Unity rendering and a live two-player session remain to be checked.
+
 ## Preview 11 - 1.1.0-stability.11
 
 - Compare enabled mod IDs, versions, load order, code/data fingerprints and

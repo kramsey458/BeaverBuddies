@@ -57,6 +57,7 @@ namespace TimberNet
 
         public Task Drain() { lock (gate) return tail; }
         public int PendingMessages { get { lock (gate) return messages; } }
+        public (int Messages, long Bytes) PendingData { get { lock (gate) return (messages, (long)characters * sizeof(char)); } }
         public void Stop()
         {
             lock (gate)

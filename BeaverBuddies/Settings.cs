@@ -72,6 +72,10 @@ namespace BeaverBuddies
         public ModSetting<bool> AutomaticSnapshotResync { get; } =
             new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.AutomaticSnapshotResync")
                 .SetLocalizedTooltip("BeaverBuddies.Settings.AutomaticSnapshotResync.Tooltip"));
+        public ModSetting<bool> ReconnectGracePeriod { get; } =
+            new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.ReconnectGracePeriod")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.ReconnectGracePeriod.Tooltip"));
+        public static bool ReconnectGraceEnabled => instance?.ReconnectGracePeriod.Value ?? true;
         public static bool SnapshotResyncEnabled => instance?.AutomaticSnapshotResync.Value ?? true;
         public ModSetting<bool> PlayerActivity { get; } =
             new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.PlayerActivity")
@@ -81,6 +85,15 @@ namespace BeaverBuddies
             new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.RollingDiagnostics")
                 .SetLocalizedTooltip("BeaverBuddies.Settings.RollingDiagnostics.Tooltip"));
         public static bool RollingDiagnosticsEnabled => instance?.RollingDiagnostics.Value ?? true;
+        public ModSetting<bool> ConnectionStatusPanel { get; } =
+            new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.ConnectionStatusPanel")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.ConnectionStatusPanel.Tooltip"));
+        public ModSetting<bool> CollapseConnectionStatus { get; } =
+            new(false, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.CollapseConnectionStatus"));
+        public static bool StatusPanelEnabled => instance?.ConnectionStatusPanel.Value ?? true;
+        public static bool StatusPanelCollapsed => instance?.CollapseConnectionStatus.Value ?? false;
+        public static void SetStatusPanelVisible(bool visible) => instance?.ConnectionStatusPanel.SetValue(visible);
+        public static void SetStatusPanelCollapsed(bool collapsed) => instance?.CollapseConnectionStatus.SetValue(collapsed);
 
         // ---- Developer Settings ----
 

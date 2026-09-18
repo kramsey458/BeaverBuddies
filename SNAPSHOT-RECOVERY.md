@@ -1,4 +1,8 @@
-# Preview 9: sending and snapshot recovery
+# Sending and snapshot recovery
+
+Preview 13 extends this flow to transport disconnects with a reconnect grace
+period. See [RECONNECT-GRACE.md](RECONNECT-GRACE.md) for its countdown, controls,
+and timeout behavior. The original desync recovery behavior is described below.
 
 Preview 9 includes all fixes from Preview 8. Its compiled ZIP must be installed
 on every computer, followed by restarting Timberborn. Keep Harmony and Mod

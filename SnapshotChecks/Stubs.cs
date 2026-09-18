@@ -31,7 +31,7 @@ namespace BeaverBuddies
 {
     public static class GuidPatcher { public static Guid RealNewGuid() => Guid.NewGuid(); }
     public static class Plugin { public static void LogWarning(string s) { } public static void LogError(string s) { } }
-    public static class Settings { public static bool SnapshotResyncEnabled = true; }
+    public static class Settings { public static bool SnapshotResyncEnabled = true, ReconnectGraceEnabled = true; }
     public static class DeterminismService { public static byte[] Seed; public static void InitGameStartState(byte[] b) => Seed=b; }
     public static class SingletonManager
     {
@@ -41,7 +41,7 @@ namespace BeaverBuddies
     }
     public class ReplayService
     {
-        public static bool HasReplayFailure, IsLoaded;
+        public static bool HasReplayFailure, IsLoaded; public static bool CompatibilityReady = true;
         public float TargetSpeed = 3;
         public Action Finish;
         public bool DeferFinish;
@@ -59,6 +59,8 @@ namespace BeaverBuddies.IO
     public class TestNet
     {
         public int ClientCount=2;
+        public ReconnectTickets ReconnectTickets;
+        public string RecoveryId, RecoveryDigest;
         public bool IsStopped;
         public List<JObject> Sent = new();
         public TaskCompletionSource<bool> Flush = new();
@@ -80,7 +82,7 @@ namespace BeaverBuddies.IO
         public TestNet NetBase = new();
         public byte[] Map;
         public bool HasSteamClients;
-        public void Start(byte[] bytes) => Map=bytes;
+        public void Start(byte[] bytes, ReconnectTickets tickets = null) { Map=bytes; NetBase.ReconnectTickets=tickets; }
     }
     public class ClientEventIO : EventIO { public TestNet NetBase = new(); }
 }
@@ -114,6 +116,7 @@ namespace BeaverBuddies.Connect
     {
         public static void Forget() { }
         public static void Hide() { }
-        public static void Show(Timberborn.CoreUI.DialogBoxShower d,string text,Action cancel) { }
+        public static void Show(Timberborn.CoreUI.DialogBoxShower d,string text,Action cancel,Action continueWithout = null) { Cancel=cancel; Continue=continueWithout; Text=text; }
+        public static Action Cancel, Continue; public static string Text;
     }
 }

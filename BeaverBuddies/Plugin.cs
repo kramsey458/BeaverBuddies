@@ -64,6 +64,7 @@ namespace BeaverBuddies
             containerDefinition.Bind<DesyncDetecterService>().AsSingleton();
             containerDefinition.Bind<RollingDiagnosticsService>().AsSingleton();
             containerDefinition.Bind<CompatibilityStatus>().AsSingleton();
+            containerDefinition.Bind<BeaverBuddies.Status.MultiplayerStatusPanel>().AsSingleton();
 
         }
     }
@@ -75,6 +76,8 @@ namespace BeaverBuddies
         {
             // This will be called if the player exits to the main menu,
             // so it's best to reset everything.
+            if (!SnapshotResyncService.Active && !ReplayService.HasReplayFailure && EventIO.Get() is ClientEventIO leavingClient)
+                leavingClient.NetBase?.LeaveSession();
             SingletonManager.Reset();
             EventIO.Reset();
             SnapshotResyncService.Reset();

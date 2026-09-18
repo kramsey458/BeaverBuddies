@@ -135,6 +135,112 @@ Test("Steam invite sessions fall back explicitly instead of entering a broken re
     SnapshotResyncService.TryRecover(SingletonManager.Replay); SingletonManager.Replay.Finish(); f.Service.UpdateSingleton();
     Check(f.Dialogs.Shown==1 && f.Dialogs.Message.Contains("Steam") && f.Saves.Saves==0);
 });
+Test("A direct-IP drop pauses at a full tick and includes the missing guest in recovery", () =>
+{
+    var f=new Fixture(); f.BeginGrace(); Check(SnapshotResyncService.Active && f.Saves.Saves==0);
+    Check((bool)f.Host.NetBase.Sent.Single()["connectionRecovery"]);
+    SingletonManager.Replay.Finish(); f.Service.UpdateSingleton(); Check(f.Saves.Saves==1 && SingletonManager.Replay.Frozen);
+});
+Test("Reconnect timeout continues with connected players only after snapshot readiness", () =>
+{
+    var f=new Fixture(); var id=f.ReloadGrace(); var host=(ServerEventIO)EventIO.Get(); var peer=new Peer();
+    host.NetBase.ReconnectTickets.Claim(peer,f.Tickets[0],true); host.NetBase.ClientCount=1;
+    ReplayService.IsLoaded=true; State().GetType().GetField("ReconnectDeadline").SetValue(State(),double.NegativeInfinity);
+    f.Service.UpdateSingleton(); Check(SnapshotResyncService.Active && SingletonManager.Replay.Recorded.Count==0);
+    SnapshotResyncService.Receive(host,peer,Control("ResyncReady",id)); f.Service.UpdateSingleton();
+    Check(!SnapshotResyncService.Active && SingletonManager.Replay.Recorded.Single().speed==3);
+    Check(host.NetBase.ReconnectTickets.Export(true).Length==1);
+});
+Test("Grace expiration with no guests reloads safely then resumes host alone", () =>
+{
+    var f=new Fixture(); f.ReloadGrace(); var host=(ServerEventIO)EventIO.Get(); host.NetBase.ClientCount=0;
+    State().GetType().GetField("ReconnectDeadline").SetValue(State(),double.NegativeInfinity);
+    f.Service.UpdateSingleton(); Check(SnapshotResyncService.Active); ReplayService.IsLoaded=true; f.Service.UpdateSingleton();
+    Check(!SnapshotResyncService.Active && SingletonManager.Replay.Recorded.Single().speed==3 && f.Loader.Loads==1);
+});
+Test("Continue without player closes admission but waits for connected guests to load", () =>
+{
+    var f=new Fixture(); var id=f.ReloadGrace(); var host=(ServerEventIO)EventIO.Get(); var peer=new Peer();
+    host.NetBase.ReconnectTickets.Claim(peer,f.Tickets[0],true); host.NetBase.ClientCount=1; ReplayService.IsLoaded=true;
+    SnapshotResyncService.ContinueWithoutMissingPlayers(); f.Service.UpdateSingleton(); Check(SnapshotResyncService.Active);
+    bool rejected=false; try { host.NetBase.ReconnectTickets.Claim(new Peer(),f.Tickets[1],true); } catch(IOException) { rejected=true; } Check(rejected);
+    SnapshotResyncService.Receive(host,peer,Control("ResyncReady",id)); f.Service.UpdateSingleton(); Check(!SnapshotResyncService.Active);
+});
+Test("Guests reconnecting in time get a separate load deadline", () =>
+{
+    var f=new Fixture(); var id=f.ReloadGrace(); var host=(ServerEventIO)EventIO.Get(); var a=new Peer(); var b=new Peer();
+    host.NetBase.ReconnectTickets.Claim(a,f.Tickets[0],true);host.NetBase.ReconnectTickets.Claim(b,f.Tickets[1],true);
+    State().GetType().GetField("ReconnectDeadline").SetValue(State(),double.NegativeInfinity); ReplayService.IsLoaded=true;
+    f.Service.UpdateSingleton(); Check(SnapshotResyncService.Active && f.Dialogs.Shown==0);
+    SnapshotResyncService.Receive(host,a,Control("ResyncReady",id)); f.Service.UpdateSingleton(); Check(SnapshotResyncService.Active);
+    SnapshotResyncService.Receive(host,b,Control("ResyncReady",id)); f.Service.UpdateSingleton(); Check(!SnapshotResyncService.Active);
+});
+Test("Cancel recovery leaves the world paused and invalidates pending admission", () =>
+{
+    var f=new Fixture(); f.ReloadGrace(); ReplayService.IsLoaded=true; f.Service.UpdateSingleton();
+    SnapshotResyncStatus.Cancel(); Check(SnapshotResyncService.Active && f.Dialogs.Shown==1 && SingletonManager.Replay.Frozen);
+    var host=(ServerEventIO)EventIO.Get(); bool rejected=false;try{host.NetBase.ReconnectTickets.Claim(new Peer(),f.Tickets[0],true);}catch(IOException){rejected=true;}Check(rejected);
+    f.Service.UpdateSingleton();Check(SingletonManager.Replay.Recorded.Count==0);
+});
+Test("Guest transport loss uses ticket admission metadata when reload notice was missed", () =>
+{
+    var f=new Fixture();var old=new ClientEventIO();EventIO.Set(old);
+    var net=new TimberClient(new TCPClientWrapper("127.0.0.1",1)){ReconnectToken=new string('A',64)};
+    Check(SnapshotResyncService.TryConnectionLost(old,net)); Check(f.Connection.Reconnects==1 && SingletonManager.Replay.Frozen);
+    var fresh=new ClientEventIO(); fresh.NetBase.RecoveryId="new-session";fresh.NetBase.RecoveryDigest=(string)Control("x","x")["snapshotSha256"];EventIO.Set(fresh);
+    Check(SnapshotResyncService.MapLoading(fresh,ServerHostingUtils.Bytes)); SnapshotResyncService.InitializedClient(); f.Service.UpdateSingleton();
+    Check((string)fresh.NetBase.Sent.Single()["id"]=="new-session");
+    SnapshotResyncService.Receive(fresh,new Peer(),Control("ResyncComplete","new-session"));Check(!SnapshotResyncService.Active);
+});
+Test("Guest refuses old initial map when host never started snapshot recovery", () =>
+{
+    var f=new Fixture();var old=new ClientEventIO();EventIO.Set(old);
+    var net=new TimberClient(new TCPClientWrapper("127.0.0.1",1)){ReconnectToken=new string('A',64)};
+    Check(SnapshotResyncService.TryConnectionLost(old,net));var fresh=new ClientEventIO();EventIO.Set(fresh);
+    Check(!SnapshotResyncService.MapLoading(fresh,ServerHostingUtils.Bytes) && f.Dialogs.Shown==1);
+});
+Test("Replay failures, initial joins and opt-out never start automatic reconnect", () =>
+{
+    var f=new Fixture();var old=new ClientEventIO();EventIO.Set(old);var net=new TimberClient(new TCPClientWrapper("127.0.0.1",1)){ReconnectToken="ticket"};
+    ReplayService.HasReplayFailure=true;Check(!SnapshotResyncService.TryConnectionLost(old,net));ReplayService.HasReplayFailure=false;
+    ReplayService.IsLoaded=false;Check(!SnapshotResyncService.TryConnectionLost(old,net));ReplayService.IsLoaded=true;
+    Settings.ReconnectGraceEnabled=false;Check(!SnapshotResyncService.TryConnectionLost(old,net));Settings.ReconnectGraceEnabled=true;
+});
+Test("A second dropped loading connection after admission closes remains paused", () =>
+{
+    var f=new Fixture(); f.ReloadGrace(); var host=(ServerEventIO)EventIO.Get(); var peer=new Peer();
+    host.NetBase.ReconnectTickets.Claim(peer,f.Tickets[0],true);host.NetBase.ClientCount=1;ReplayService.IsLoaded=true;
+    SnapshotResyncService.ContinueWithoutMissingPlayers();peer.Close();SnapshotResyncService.PeerDisconnected(host,peer);
+    Check(f.Dialogs.Shown==1 && SnapshotResyncService.Active && SingletonManager.Replay.Recorded.Count==0);
+});
+Test("Loss after prepare and during snapshot load retries instead of canceling recovery", () =>
+{
+    var f=new Fixture(); var old=new ClientEventIO();EventIO.Set(old);
+    var prepare=Control("ResyncPrepare","abc");prepare["connectionRecovery"]=true;
+    SnapshotResyncService.Receive(old,new Peer(),prepare);SnapshotResyncService.ConnectionFailed("lost before reload");
+    Check(SnapshotResyncService.IsReconnecting && f.Connection.Reconnects==1 && f.Dialogs.Shown==0);
+    var fresh=new ClientEventIO();fresh.NetBase.RecoveryId="abc";fresh.NetBase.RecoveryDigest=(string)Control("x","x")["snapshotSha256"];EventIO.Set(fresh);
+    Check(SnapshotResyncService.MapLoading(fresh,ServerHostingUtils.Bytes));SnapshotResyncService.ConnectionFailed("lost while loading");
+    Check(SnapshotResyncService.IsReconnecting && f.Connection.Reconnects==2 && f.Dialogs.Shown==0);
+});
+Test("Paused hosts remain paused after the reconnect grace period", () =>
+{
+    var f=new Fixture();SingletonManager.Replay.TargetSpeed=0;f.ReloadGrace();var host=(ServerEventIO)EventIO.Get();host.NetBase.ClientCount=0;
+    ReplayService.IsLoaded=true;SnapshotResyncService.ContinueWithoutMissingPlayers();f.Service.UpdateSingleton();
+    Check(!SnapshotResyncService.Active && SingletonManager.Replay.Recorded.Single().speed==0);
+});
+Test("Cancel during an asynchronous save invalidates its late completion", () =>
+{
+    var f=new Fixture();f.BeginGrace();SingletonManager.Replay.Finish();f.Service.UpdateSingleton();Check(f.Saves.Saves==1);
+    SnapshotResyncStatus.Cancel();f.Saves.Saved(new SaveReference());f.Host.NetBase.Flush.SetResult(true);f.Service.UpdateSingleton();
+    Check(f.Loader.Loads==0 && f.Host.NetBase.Sent.All(m=>(string)m["command"]!="ResyncReload") && f.Dialogs.Shown==1);
+});
+Test("Disk or scene-load failures stop recovery rather than retrying as a network hiccup", () =>
+{
+    var f=new Fixture();var old=new ClientEventIO();EventIO.Set(old);var net=new TimberClient(new TCPClientWrapper("127.0.0.1",1)){ReconnectToken="ticket"};
+    Check(SnapshotResyncService.TryConnectionLost(old,net));SnapshotResyncService.ConnectionFailed("disk full",false);f.Service.UpdateSingleton();
+    Check(!SnapshotResyncService.IsReconnecting && f.Dialogs.Shown==1 && f.Connection.Reconnects==1);
+});
 Console.WriteLine($"{total-failed}/{total} passed (production coordinator; mocked Unity scene/save boundaries)");
 return failed==0 ? 0 : 1;
 
@@ -147,8 +253,22 @@ sealed class Fixture
     public Fixture()
     {
         SnapshotResyncService.Reset(); ReplayService.HasReplayFailure=false; ReplayService.IsLoaded=true;
-        Settings.SnapshotResyncEnabled=true; SingletonManager.Replay=new() { DeferFinish=true }; EventIO.Set(Host);
+        Settings.SnapshotResyncEnabled=true; Settings.ReconnectGraceEnabled=true; ReplayService.CompatibilityReady=true; SingletonManager.Replay=new() { DeferFinish=true }; EventIO.Set(Host);
         Service=new(Saves,Loader,new GameSaveRepository(),Dialogs,Connection);
+    }
+    public string[] Tickets;
+    public void BeginGrace()
+    {
+        Host.NetBase.ReconnectTickets=new ReconnectTickets(); var a=new Peer();var b=new Peer();
+        Host.NetBase.ReconnectTickets.Claim(a,"",true);Host.NetBase.ReconnectTickets.Activate(a);
+        Host.NetBase.ReconnectTickets.Claim(b,"",true);Host.NetBase.ReconnectTickets.Activate(b);
+        Tickets=Host.NetBase.ReconnectTickets.Export(); a.Close();Host.NetBase.ReconnectTickets.Release(a);Host.NetBase.ClientCount=1;
+        SnapshotResyncService.PeerDisconnected(Host,new TCPClientWrapper("127.0.0.1",1));
+    }
+    public string ReloadGrace()
+    {
+        BeginGrace();SingletonManager.Replay.Finish();Service.UpdateSingleton();Saves.Saved(new SaveReference());
+        Host.NetBase.Flush.SetResult(true);Service.UpdateSingleton();return (string)Host.NetBase.Sent.First()["id"];
     }
     public string ReloadHost()
     {

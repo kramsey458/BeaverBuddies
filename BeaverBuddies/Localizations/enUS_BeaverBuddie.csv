@@ -94,3 +94,10 @@ BeaverBuddies.Settings.PlayerActivity.Tooltip,"Share your world cursor, selected
 
 BeaverBuddies.Settings.RollingDiagnostics,"Rolling desync diagnostics",
 BeaverBuddies.Settings.RollingDiagnostics.Tooltip,"Keep bounded recent simulation samples and save a local diagnostic ZIP on desync or recovery. Enabled by default; no automatic upload and no detailed tracing required.",
+
+BeaverBuddies.Settings.ConnectionStatusPanel,"Connection and simulation status",
+BeaverBuddies.Settings.ConnectionStatusPanel.Tooltip,"Show the multiplayer HUD with response time, queued events and simulation progress. Hide or collapse it in the HUD; restore it from Multiplayer status in the pause menu.",
+BeaverBuddies.Settings.CollapseConnectionStatus,"Collapse connection status",
+
+BeaverBuddies.Settings.ReconnectGracePeriod,Reconnect grace period
+BeaverBuddies.Settings.ReconnectGracePeriod.Tooltip,"Automatically recover direct-IP disconnects with a shared snapshot. The host allows 30 seconds to reconnect, then continues with connected players. Requires automatic snapshot recovery."

@@ -23,13 +23,13 @@ namespace BeaverBuddies.IO
         private bool FailedToConnect = false;
 
         private ClientEventIO(ISocketStream socket, MapReceived mapReceivedCallback,
-            Action<string> onError)
+            Action<string> onError, string reconnectToken)
         {
             this.mapReceivedCallback = mapReceivedCallback;
 
             TryRegisterSteamPacketReceiver(socket);
 
-            NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity() };
+            NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity(), UseReconnectHandshake = true, ReconnectToken = reconnectToken };
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
             NetBase.OnControl += (peer, message) => BeaverBuddies.Connect.SnapshotResyncService.Receive(this, peer, message);
             NetBase.OnControl += (peer, message) => BeaverBuddies.DesyncDetecter.RollingDiagnosticsService.Receive(this, message);
@@ -39,9 +39,10 @@ namespace BeaverBuddies.IO
             NetBase.OnError += (error) =>
             {
                 Plugin.LogError(error);
+                bool recovering = BeaverBuddies.Connect.SnapshotResyncService.TryConnectionLost(this, NetBase);
                 CleanUp();
                 FailedToConnect = true;
-                if (!ReplayService.HasReplayFailure) onError(error);
+                if (!recovering && !ReplayService.HasReplayFailure) onError(error);
             };
             try
             {
@@ -65,11 +66,11 @@ namespace BeaverBuddies.IO
             NetBase = null;
         }
 
-        public static ClientEventIO Create(ISocketStream socket, MapReceived mapReceivedCallback, Action<string> onError)
+        public static ClientEventIO Create(ISocketStream socket, MapReceived mapReceivedCallback, Action<string> onError, string reconnectToken = null)
         {
             try
             {
-                ClientEventIO eventIO = new ClientEventIO(socket, mapReceivedCallback, onError);
+                ClientEventIO eventIO = new ClientEventIO(socket, mapReceivedCallback, onError, reconnectToken);
                 if (eventIO.FailedToConnect) return null;
                 return eventIO;
             }
