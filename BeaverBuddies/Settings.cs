@@ -69,6 +69,11 @@ namespace BeaverBuddies
                 .SetLocalizedTooltip("BeaverBuddies.Settings.PauseReduction.Tooltip")
         );
 
+        public ModSetting<bool> AutomaticSnapshotResync { get; } =
+            new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.AutomaticSnapshotResync")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.AutomaticSnapshotResync.Tooltip"));
+        public static bool SnapshotResyncEnabled => instance?.AutomaticSnapshotResync.Value ?? true;
+
         // ---- Developer Settings ----
 
         public ModSetting<bool> AlwaysTrace { get; } =

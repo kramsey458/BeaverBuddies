@@ -96,7 +96,7 @@ namespace BeaverBuddies.Events
             if (!ReplayService.IsLoaded) return null;
 
             var replayService = GetSingleton<ReplayService>();
-            if (replayService == null || replayService.IsDesynced) return null;
+            if (replayService == null || (replayService.IsDesynced && !BeaverBuddies.Connect.SnapshotResyncService.Active)) return null;
             return replayService;
         }
         
@@ -115,6 +115,7 @@ namespace BeaverBuddies.Events
             // This handles nested calls (e.g., Replay() calls Unlock() which triggers this prefix again)
             if (ReplayService.HasReplayFailure) return false;
             if (ReplayService.IsReplayingEvents) return true;
+            if (ReplayService.IsLoaded && BeaverBuddies.Connect.SnapshotResyncService.Active && !DeterminismService.IsTicking) return false;
 
             // If the replay service is not available, just use default behavior
             ReplayService replayService = GetReplayServiceIfReady();

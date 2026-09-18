@@ -98,6 +98,7 @@ WaterChecks.Run(assembly, Test);
 TimingChecks.Run(assembly, Test);
 DemolitionChecks.Run(assembly, Test);
 InputRecoveryChecks.Run(assembly, Test);
+SnapshotGuardChecks.Run(assembly, Test);
 Console.WriteLine($"{total-failures}/{total} passed");
 return failures == 0 ? 0 : 1;
 

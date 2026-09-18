@@ -52,6 +52,7 @@ namespace BeaverBuddies
             containerDefinition.Bind<DeterminismService>().AsSingleton();
             containerDefinition.Bind<TickReplacerService>().AsSingleton();
             containerDefinition.Bind<RehostingService>().AsSingleton();
+            containerDefinition.Bind<SnapshotResyncService>().AsSingleton();
             containerDefinition.Bind<MultiplayerInputRecovery>().AsSingleton();
             containerDefinition.Bind<ReportingService>().AsSingleton();
             containerDefinition.Bind<LateTickableBuffer>().AsSingleton();
@@ -72,6 +73,7 @@ namespace BeaverBuddies
             // so it's best to reset everything.
             SingletonManager.Reset();
             EventIO.Reset();
+            SnapshotResyncService.Reset();
 
             Plugin.Log($"Registering Main Menu Services");
             containerDefinition.Bind<ClientConnectionService>().AsSingleton();

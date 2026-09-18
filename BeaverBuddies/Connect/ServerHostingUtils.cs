@@ -122,7 +122,7 @@ namespace BeaverBuddies.Connect
 
         public static byte[] GetMapBtyes(GameSaveRepository repository, SaveReference saveReference)
         {
-            var inputStream = repository.OpenSaveWithoutLogging(saveReference);
+            using var inputStream = repository.OpenSaveWithoutLogging(saveReference);
             byte[] data;
             using (var memoryStream = new MemoryStream())
             {

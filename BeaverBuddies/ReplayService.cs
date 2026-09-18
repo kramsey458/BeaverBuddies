@@ -124,7 +124,7 @@ namespace BeaverBuddies
             {
                 // The client shouldn't tick until the server has sent a heartbeat
                 // Check the *next* tick, since current tick has already happened
-                return !(io is ClientEventIO && !io.HasEventsForTick(TicksSinceLoad + 1));
+                return !SnapshotResyncService.Active && !(io is ClientEventIO && !io.HasEventsForTick(TicksSinceLoad + 1));
             }
         }
 
@@ -259,7 +259,7 @@ namespace BeaverBuddies
             // During a replay, we save things manually, only if they're
             // successful.
             if (IsReplayingEvents) return;
-            if (!IsLoaded) return;
+            if (!IsLoaded || IsDesynced || SnapshotResyncService.Active) return;
 
             if (Settings.Debug && Settings.VerboseLogging)
                 Plugin.Log($"RecordEvent: {JsonSettings.Serialize(replayEvent)}");
@@ -310,7 +310,7 @@ namespace BeaverBuddies
             int currentTick = ticksSinceLoad;
             ReplayExecution.Run(eventsToReplay, replayEvent =>
             {
-                if (HasReplayFailure || IsDesynced || EventIO.IsNull) return false;
+                if (HasReplayFailure || IsDesynced || EventIO.IsNull || SnapshotResyncService.FreezingOldSession) return false;
                 int eventTime = replayEvent.ticksSinceLoad;
                 if (eventTime > currentTick)
                     return false;
@@ -377,6 +377,7 @@ namespace BeaverBuddies
         public void HandleDesync()
         {
             if (IsDesynced) return;
+            if (SnapshotResyncService.TryRecover(this)) return;
 
             ClientDesyncedEvent e = new ClientDesyncedEvent()
             {
@@ -390,14 +391,36 @@ namespace BeaverBuddies
             // have a random state set.
             eventsToSend.Enqueue(e);
             e.Replay(this);
-            // Send events immediately to get this event out before resetting
-            // the EventIO
-            // TODO: This only works because sending events is currently a synchronous
-            // operation, and it really shouldn't be, so this is a short-term fix!
+            // Enqueue the final notice, then let the transport drain it before closing.
             SendEvents();
             // Pause
             SpeedChangePatcher.SetSpeedSilentlyNow(_speedManager, 0);
+            if (io is ClientEventIO oldClient) oldClient.NetBase?.CloseAfterFlush();
+            if (io is ServerEventIO oldServer) oldServer.NetBase?.CloseAfterFlush();
             EventIO.Reset();
+        }
+
+        public void FreezeForSnapshot()
+        {
+            IsDesynced = true;
+            TargetSpeed = 0;
+            eventsToPlay.Clear(); eventsToSend.Clear();
+            SpeedChangePatcher.SetSpeedSilentlyNow(_speedManager, 0);
+            GetSingleton<BeaverBuddies.Fixes.MultiplayerInputRecovery>()?.RequestReset();
+        }
+
+        public void FinishTickForSnapshot(Action completed)
+        {
+            // The host can be between buckets even when the displayed speed is paused.
+            Action finish = () =>
+            {
+                GetSingleton<TickableSingletonService>()?.FinishParallelTick();
+                completed();
+            };
+            if (_tickingService.NextBucket == 0) { finish(); return; }
+            if (TargetSpeed == 0) TargetSpeed = 1;
+            SpeedChangePatcher.SetSpeedSilentlyNow(_speedManager, 1);
+            _tickingService.FinishFullTickAndThen(finish);
         }
 
         /**
@@ -476,7 +499,7 @@ namespace BeaverBuddies
                 waitUpdates = -1;
             }
             io.Update();
-            if (!CanAct) return;
+            if (!CanAct || SnapshotResyncService.FreezingOldSession) return;
             // Only replay events on Update if we're paused by the user.
             // Also only send events if paused, so the client doesn't play
             // then before the end of the tick.
@@ -489,7 +512,7 @@ namespace BeaverBuddies
 
         public void SetTargetSpeed(float speed)
         {
-            TargetSpeed = speed;
+            TargetSpeed = SnapshotResyncService.Active ? 0 : speed;
             UpdateSpeed();
         }
 
@@ -657,7 +680,7 @@ namespace BeaverBuddies
             // Interruptions are always temporary and get reset at the end of
             // each ticking update
             ShouldInterruptTicking = false;
-            if (!ShouldCompleteFullTick) return;
+            if (!ShouldCompleteFullTick || NextBucket != 0) return;
             Plugin.Log($"Finished full tick; calling {onCompletedFullTick.Count} callbacks");
             foreach (var action in onCompletedFullTick)
             {

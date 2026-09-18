@@ -1,66 +1,60 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace TimberNet
 {
     public class MultiSocketListener : ISocketListener
     {
-        private readonly List<ISocketListener> listeners = new List<ISocketListener>();
-
-        private readonly ConcurrentQueueWithWait<ISocketStream> accepted = new ConcurrentQueueWithWait<ISocketStream>();
-        private bool isAccepting = false;
-        private bool isStopped = false;
-
+        readonly List<ISocketListener> listeners;
+        readonly BlockingCollection<ISocketStream> accepted = new BlockingCollection<ISocketStream>();
+        volatile bool stopped;
+        readonly object stopGate = new object();
         public IEnumerable<ISocketListener> Listeners => listeners;
-
-        public MultiSocketListener(params ISocketListener[] listeners) 
-        {
-            this.listeners.AddRange(listeners);
-        }
-
+        public MultiSocketListener(params ISocketListener[] listeners) => this.listeners = listeners.ToList();
         public ISocketStream AcceptClient()
         {
-            if (!isAccepting)
-            {
-                StartAccpting();
-                isAccepting = true;
-            }
-            accepted.WaitAndTryDequeue(out ISocketStream socket);
-            return socket;
+            try { return accepted.Take(); }
+            catch (InvalidOperationException error) { throw new IOException("Listener stopped.", error); }
         }
-
-        private void StartAccpting()
-        {
-            foreach (var listener in listeners)
-            {
-                Task.Run(() =>
-                {
-                    while (!isStopped)
-                    {
-                        accepted.Enqueue(listener.AcceptClient());
-                    }
-                });
-            }
-        }
-
         public void Start()
         {
-            listeners.ForEach(listener => listener.Start());
+            try
+            {
+                foreach (var listener in listeners) listener.Start();
+                foreach (var listener in listeners)
+                    _ = Task.Run(() =>
+                    {
+                        try
+                        {
+                            while (!stopped)
+                            {
+                                var stream = listener.AcceptClient();
+                                if (stopped) { stream.Close(); return; }
+                                try { accepted.Add(stream); }
+                                catch (InvalidOperationException) { stream.Close(); return; }
+                            }
+                        }
+                        catch { if (!stopped) Stop(); }
+                    });
+            }
+            catch { Stop(); throw; }
         }
-
         public void Stop()
         {
-            listeners.ForEach(listener => listener.Stop());
-            isStopped = true;
+            lock (stopGate)
+            {
+                if (stopped) return;
+                stopped = true;
+                accepted.CompleteAdding(); // Wake the outer TimberServer accept worker too.
+                foreach (var listener in listeners)
+                    try { listener.Stop(); } catch { }
+                while (accepted.TryTake(out var stream)) stream.Close();
+            }
         }
-
-        public T GetListener<T>()
-        {
-            return (T)listeners.Find(listener => listener is T);
-        }
+        public T GetListener<T>() => (T)(object)listeners.FirstOrDefault(listener => listener is T);
     }
 }

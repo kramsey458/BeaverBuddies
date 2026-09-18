@@ -26,6 +26,16 @@ namespace BeaverBuddies.Connect
         private UrlOpener _urlOpener;
         private ClientEventIO client;
         private Settings _settings;
+        static Func<ISocketStream> reconnectSocket;
+        double nextReconnect;
+        bool snapshotAttempt;
+        static double Now => (double)System.Diagnostics.Stopwatch.GetTimestamp() / System.Diagnostics.Stopwatch.Frequency;
+        public void BeginSnapshotReconnect()
+        {
+            client?.Close(); client = null;
+            snapshotAttempt = false; nextReconnect = Now + 1;
+        }
+
 
         public ClientConnectionService(
             GameSceneLoader gameSceneLoader,
@@ -44,7 +54,8 @@ namespace BeaverBuddies.Connect
 
         public bool TryToConnect(CSteamID friendID)
         {
-            return TryToConnect(new SteamSocket(friendID));
+            reconnectSocket = () => new SteamSocket(friendID);
+            return TryToConnect(reconnectSocket());
         }
 
         public bool TryToConnect(string address)
@@ -86,7 +97,8 @@ namespace BeaverBuddies.Connect
                 }
             }
 
-            return TryToConnect(new TCPClientWrapper(address, port));
+            reconnectSocket = () => new TCPClientWrapper(address, port);
+            return TryToConnect(reconnectSocket());
         }
 
         private bool TryToConnect(ISocketStream socket)
@@ -94,9 +106,14 @@ namespace BeaverBuddies.Connect
             Plugin.Log("Connecting client");
             client = ClientEventIO.Create(socket, LoadMap, (error) =>
             {
-                ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
+                if (SnapshotResyncService.Active)
+                {
+                    snapshotAttempt = false; nextReconnect = Now + 2;
+                    SnapshotResyncService.ConnectionFailed(error);
+                }
+                else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
             });
-            
+
             if (client == null)
             {
                 Plugin.Log("Client creation failed.");
@@ -178,28 +195,51 @@ namespace BeaverBuddies.Connect
 
         private void LoadMap(byte[] mapBytes)
         {
-            // Clean up our current co-op state before loading,
-            // so we don't, for example, end up ticking the client before
-            // it's actually loaded.
-            SingletonManager.Reset();
+            try
+            {
+                // Clean up our current co-op state before loading,
+                // so we don't, for example, end up ticking the client before
+                // it's actually loaded.
+                if (!SnapshotResyncService.MapLoading(client, mapBytes)) return;
+                SingletonManager.Reset();
 
-            Plugin.Log("Loading map");
-            //string saveName = Guid.NewGuid().ToString();
-            string saveName = TimberNetBase.GetHashCode(mapBytes).ToString("X8");
-            SaveReference saveRef = new SaveReference("Online Games", new SettlementReference(saveName, _gameSaveRepository.DefaultSaveDirectory));
-            Stream stream = _gameSaveRepository.CreateSaveSkippingNameValidation(saveRef);
-            stream.Write(mapBytes);
-            stream.Close();
+                Plugin.Log("Loading map");
+                //string saveName = Guid.NewGuid().ToString();
+                string saveName = TimberNetBase.GetHashCode(mapBytes).ToString("X8");
+                SaveReference saveRef = new SaveReference("Online Games", new SettlementReference(saveName, _gameSaveRepository.DefaultSaveDirectory));
+                using (Stream stream = _gameSaveRepository.CreateSaveSkippingNameValidation(saveRef))
+                    stream.Write(mapBytes);
 
-            // Set the RNG seed before loading the map
-            // The server does the same
-            DeterminismService.InitGameStartState(mapBytes);
-            _gameSceneLoader.StartSaveGame(saveRef);
+                // Set the RNG seed before loading the map
+                // The server does the same
+                DeterminismService.InitGameStartState(mapBytes);
+                _gameSceneLoader.StartSaveGame(saveRef);
+            }
+            catch (Exception error)
+            {
+                Plugin.LogError("Could not load the host snapshot: " + error);
+                if (SnapshotResyncService.Active) SnapshotResyncService.ConnectionFailed(error.Message);
+                else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error.Message);
+            }
         }
 
         public void UpdateSingleton()
         {
-            if (client == null) return;
+            if (SnapshotResyncService.IsReconnecting && !snapshotAttempt && Now >= nextReconnect)
+            {
+                snapshotAttempt = true;
+                try
+                {
+                    if (reconnectSocket == null) throw new InvalidOperationException("Original host address is unavailable. Join the host manually.");
+                    if (!TryToConnect(reconnectSocket())) { snapshotAttempt = false; nextReconnect = Now + 2; }
+                }
+                catch (Exception error)
+                {
+                    snapshotAttempt = false; nextReconnect = Now + 2;
+                    Plugin.LogWarning("Snapshot reconnect attempt failed: " + error.Message);
+                }
+            }
+            if (client == null || client != EventIO.Get()) return;
             //Plugin.Log("Updating client!");
             client.Update();
         }

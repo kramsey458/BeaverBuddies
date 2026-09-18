@@ -10,6 +10,26 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## Preview 9 - 1.1.0-stability.9
+
+- Queue outgoing events per connection; compress and write on workers. Bound
+  queues and preserve immutable messages, ordering, framing, and final notices.
+- Run connection attempts asynchronously and initialize joins on Update.
+- Add automatic host-snapshot recovery for direct-IP sessions, enabled by default
+  and controlled by the host. Finish the host tick and parallel work; save once;
+  reconnect everyone; verify snapshot SHA-256; reload host and guests from the same
+  bytes/seed; wait for all loaded guests before restoring the previous speed.
+- Add a **Resync from host** options-menu button and visible recovery progress.
+  Discard old-session commands. Refuse recovery after a failed replay; stop on
+  save/connection/timeout failures or rapidly recurring desyncs.
+- Steam invite sessions explicitly retain manual rehosting. Queued sending applies
+  to both TCP and Steam. Stop combined TCP/Steam accept workers when closing a
+  session, and avoid spinning on a failed listener.
+- Release Steam build succeeded; 114 automated checks passed.
+- See [SNAPSHOT-RECOVERY.md](SNAPSHOT-RECOVERY.md) for behavior and validation.
+  Native scene loading still requires a two-player playtest; Preview 9 has not
+  been validated in live multiplayer.
+
 ## Preview 8 — 1.1.0-stability.8
 
 - Recover input on desync notification and multiplayer scene load, including
@@ -329,5 +349,3 @@ Other game versions and combinations of mods may still have unrelated problems.
 No Housing Optimize changes are included. Upstream authorship and GPL licensing
 
 are preserved in `License.txt` and the repository history.
-
-

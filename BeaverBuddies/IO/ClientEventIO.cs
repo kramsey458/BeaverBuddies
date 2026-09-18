@@ -31,6 +31,7 @@ namespace BeaverBuddies.IO
 
             NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity() };
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
+            NetBase.OnControl += (peer, message) => BeaverBuddies.Connect.SnapshotResyncService.Receive(this, peer, message);
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnMapReceived += mapReceivedCallback;
             NetBase.OnLog += Plugin.Log;

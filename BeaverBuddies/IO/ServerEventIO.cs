@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BeaverBuddies.IO
 {
@@ -33,6 +34,8 @@ namespace BeaverBuddies.IO
         // user-initiated event, to make sure that the events
         // happen in the same order for the server and clients.
         public override UserEventBehavior UserEventBehavior => UserEventBehavior.QueuePlay;
+
+        public bool HasSteamClients => NetBase?.GetConnections().Any(peer => peer is SteamSocket) == true;
 
         public ISocketListener SocketListener { get; private set; }
 
@@ -81,7 +84,9 @@ namespace BeaverBuddies.IO
             //netBase = new TimberServer(port, mapProvider, null);
             NetBase.CompatibilityIdentity = BuildCompatibility.CreateIdentity();
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
+            NetBase.OnControl += (peer, message) => BeaverBuddies.Connect.SnapshotResyncService.Receive(this, peer, message);
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
+            NetBase.OnError += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnLog += Plugin.Log;
             NetBase.OnMapReceived += NetBase_OnClientConnected;
             NetBase.Start();

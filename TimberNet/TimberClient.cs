@@ -20,6 +20,8 @@ namespace TimberNet
         private readonly ISocketStream client;
         private int connectionFailed;
 
+        public override void SendControl(JObject message) => SendEvent(client, message);
+
         public override bool ShouldTick => base.ShouldTick && receivedEvents.Count > 0;
 
         public TimberClient(ISocketStream client) : base()
@@ -51,17 +53,13 @@ namespace TimberNet
         public override void Start()
         {
             base.Start();
-            // TODO: Handle async properly and cleanup
-            // TODO: Make wait configurable?
-            if (!client.ConnectAsync().Wait(3000))
-            {
-                throw new ConnectionFailureException();
-            }
-            // Connect a TCP socket at the address
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 try
                 {
+                    var connect = client.ConnectAsync();
+                    if (await Task.WhenAny(connect, Task.Delay(3000)) != connect) throw new ConnectionFailureException();
+                    await connect;
                     if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, false);
                     if (!IsStopped) StartListening(client, true);
                 }
@@ -73,11 +71,12 @@ namespace TimberNet
         public override void AbortSession(string reason)
         {
             try { SendSessionFault(client, reason); }
-            finally { Close(); }
+            finally { CloseAfterFlush(); }
         }
 
         public override void Close()
         {
+            if (CloseDeferred) return;
             base.Close();
             client.Close();
         }

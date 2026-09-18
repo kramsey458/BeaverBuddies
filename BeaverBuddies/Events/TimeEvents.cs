@@ -181,6 +181,7 @@ namespace BeaverBuddies.Events
             // This would make options menu unsynced and non-pausing,
             // but I think it's dangerous to open the menu outside of a synced pause.
             // So we will only do this if the user explicitly opts into it
+            if (BeaverBuddies.Connect.SnapshotResyncService.Active) return true;
             if (Settings.PauseReductionSetting == PauseReductionLevel.NeverAutoPause) return true;
 
             return ReplayEvent.DoPrefix(() => new ShowOptionsMenuEvent());

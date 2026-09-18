@@ -17,22 +17,30 @@ namespace TimberNet
     {
 
         private readonly List<ISocketStream> clients = new List<ISocketStream>();
-        private readonly ConcurrentDictionary<ISocketStream, ConcurrentQueue<JObject>> queuedMessages =
-            new ConcurrentDictionary<ISocketStream, ConcurrentQueue<JObject>>();
+        private readonly ConcurrentDictionary<ISocketStream, ConcurrentQueue<string>> queuedMessages =
+            new ConcurrentDictionary<ISocketStream, ConcurrentQueue<string>>();
 
         private readonly ISocketListener listener;
+        readonly ConcurrentQueue<Action> completedJoins = new ConcurrentQueue<Action>();
+        public override void Update()
+        {
+            while (completedJoins.TryDequeue(out var complete)) complete();
+            base.Update();
+        }
 
         private Func<Task<byte[]>> mapProvider;
         private Func<JObject>? initEventProvider;
 
-        public int ClientCount { get { lock (queuedMessages) return clients.Count; } }
+        public ISocketStream[] GetConnections() { lock (queuedMessages) return clients.Where(c => c.Connected).ToArray(); }
+
+        public int ClientCount { get { lock (queuedMessages) return clients.Count(client => client.Connected); } }
 
         private string? errorMessage = null;
         public bool IsAcceptingClients => errorMessage == null;
 
         public List<string?> GetConnectedClients()
         {
-            lock (queuedMessages) return clients.Select(c => c.Name).ToList();
+            lock (queuedMessages) return clients.Where(c => c.Connected).Select(c => c.Name).ToList();
         }
 
         public TimberServer(ISocketListener listener, Func<Task<byte[]>> mapProvider, Func<JObject>? initEventProvider)
@@ -75,9 +83,12 @@ namespace TimberNet
                         client = listener.AcceptClient();
                     } catch (Exception e)
                     {
-                        Log("Error accepting client.");
-                        Log(e.StackTrace);
-                        continue;
+                        if (!IsStopped)
+                        {
+                            QueueError("The host listener stopped: " + e.Message);
+                            Close();
+                        }
+                        break;
                     }
                     Task.Run(async () =>
                     {
@@ -93,16 +104,24 @@ namespace TimberNet
                             if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, true);
                             if (IsStopped || !IsAcceptingClients) { client.Close(); return; }
                             await SendMap(client);
-                            SendState(client);
-                            if (initEventProvider != null)
+                            var initialized = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                            completedJoins.Enqueue(() =>
                             {
-                                JObject initEvent = initEventProvider();
-                                // Send the event before finishing queueing
-                                // so it is guaranteed to arrive first.
-                                // (This also sends it to other clients.)
-                                DoUserInitiatedEvent(initEvent, true);
-                            }
-                            FinishQueuing(client);
+                                try
+                                {
+                                    if (IsStopped || !client.Connected) { initialized.TrySetResult(false); return; }
+                                    lock (queuedMessages)
+                                    {
+                                        FinishQueuing(client);
+                                        SendState(client);
+                                        if (initEventProvider != null) DoUserInitiatedEvent(initEventProvider());
+                                    }
+                                    initialized.TrySetResult(true);
+                                }
+                                catch (Exception error) { initialized.TrySetException(error); }
+                            });
+                            while (!initialized.Task.IsCompleted && !IsStopped && client.Connected) await Task.Delay(20);
+                            if (IsStopped || !client.Connected || !await initialized.Task) { client.Close(); return; }
 
                             // This must come last - it is an infinite loop
                             // until the client disconnects
@@ -124,7 +143,7 @@ namespace TimberNet
             lock (queuedMessages)
             {
                 if (IsStopped) { client.Close(); throw new IOException("Session closed while joining."); }
-                queuedMessages.TryAdd(client, new ConcurrentQueue<JObject>());
+                queuedMessages.TryAdd(client, new ConcurrentQueue<string>());
                 clients.Add(client);
             }
         }
@@ -134,13 +153,13 @@ namespace TimberNet
             // Log("finishing queuing");
             lock(queuedMessages)
             {
-                if (queuedMessages.TryGetValue(client, out ConcurrentQueue<JObject> queue))
+                if (queuedMessages.TryGetValue(client, out ConcurrentQueue<string> queue))
                 {
                     // Log($"Found {queue.Count} messages");
-                    while (queue.TryDequeue(out JObject message))
+                    while (queue.TryDequeue(out string message))
                     {
                         // Log(message.ToString());
-                        SendEvent(client, message);
+                        SendSerializedEvent(client, message);
                     }
                     queuedMessages.TryRemove(client, out _);
                 }
@@ -201,6 +220,7 @@ namespace TimberNet
 
         private void SendEventToClients(JObject message, bool sendNow)
         {
+            string json = message.ToString(Newtonsoft.Json.Formatting.None);
             lock (queuedMessages)
             {
                 for (int i = clients.Count - 1; i >= 0; i--)
@@ -216,29 +236,32 @@ namespace TimberNet
                 {
                     if (sendNow)
                     {
-                        SendEvent(client, message);
+                        SendSerializedEvent(client, json);
                     }
                     else
                     {
-                        QueueOrSentToClient(client, message);
+                        QueueOrSentToClient(client, json);
                     }
                 });
             }
         }
 
-        private void QueueOrSentToClient(ISocketStream client, JObject message)
+        private void QueueOrSentToClient(ISocketStream client, string json)
         {
             if (!client.Connected) return;
 
-            if (queuedMessages.TryGetValue(client, out ConcurrentQueue<JObject> queue))
+            if (queuedMessages.TryGetValue(client, out ConcurrentQueue<string> queue))
             {
-                queue.Enqueue(message);
+                if (queue.Count >= 2048 || queue.Sum(item => (long)item.Length) + json.Length > 8 * 1024 * 1024) { HandleConnectionFailure(client, "Join backlog exceeded."); return; }
+                queue.Enqueue(json);
             }
             else
             {
-                SendEvent(client, message);
+                SendSerializedEvent(client, json);
             }
         }
+
+        public override void SendControl(JObject message) => SendEventToClients(message, false);
 
         public override void AbortSession(string reason)
         {
@@ -247,11 +270,12 @@ namespace TimberNet
                 lock (queuedMessages)
                     foreach (var client in clients.ToArray()) SendSessionFault(client, reason);
             }
-            finally { Close(); }
+            finally { CloseAfterFlush(); }
         }
 
         public override void Close()
         {
+            if (CloseDeferred) return;
             base.Close();
             try
             {

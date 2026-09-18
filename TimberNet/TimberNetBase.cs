@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace TimberNet
 {
@@ -18,6 +19,25 @@ namespace TimberNet
     public abstract class TimberNetBase
     {
         public const int HEADER_SIZE = 4;
+        readonly ConcurrentDictionary<ISocketStream, OrderedSender> senders = new ConcurrentDictionary<ISocketStream, OrderedSender>();
+        readonly ConcurrentQueue<(ISocketStream Stream, JObject Message)> controls = new ConcurrentQueue<(ISocketStream, JObject)>();
+        public event Action<ISocketStream, JObject>? OnControl;
+        volatile bool draining;
+        protected bool CloseDeferred => draining;
+        public Task FlushAsync() => Task.WhenAll(senders.Values.Select(s => s.Drain()));
+        public void CloseAfterFlush()
+        {
+            if (draining || IsStopped) return;
+            draining = true; isStopped = true;
+            _ = Task.Run(async () =>
+            {
+                try { await Task.WhenAny(FlushAsync(), Task.Delay(3000)); }
+                finally { draining = false; Close(); }
+            });
+        }
+        public static JObject Control(string command) => new JObject { [TYPE_KEY] = "SessionControl", ["command"] = command };
+        public virtual void SendControl(JObject message) { }
+
         public string? CompatibilityIdentity { get; set; }
         public Func<bool>? DetailedLoggingEnabled { get; set; }
         protected bool ShouldLogDetails => DetailedLoggingEnabled?.Invoke() == true;
@@ -71,7 +91,9 @@ namespace TimberNet
 
         public virtual void Close()
         {
+            if (draining) return;
             isStopped = true;
+            foreach (var sender in senders.Values) sender.Stop();
         }
 
         public TimberNetBase()
@@ -214,21 +236,27 @@ namespace TimberNet
 
         protected void SendEvent(ISocketStream client, JObject message)
         {
-            if (ShouldLogDetails) Log($"Sending: {GetType(message)} for tick {GetTick(message)}");
-            byte[] buffer = MessageToBuffer(message);
+            if (ShouldLogDetails) Log($"Sending: {GetType(message)}");
+            SendSerializedEvent(client, message.ToString(Newtonsoft.Json.Formatting.None));
+        }
 
+        protected void SendSerializedEvent(ISocketStream client, string json)
+        {
+            if (IsStopped) return;
             try
             {
-                SendDataWithLength(client, buffer);
-            } catch (Exception e)
-            {
-                HandleConnectionFailure(client, $"Error sending event: {e.Message}");
+                // Snapshot JSON before returning to callers; compression and writes run on the worker.
+                senders.GetOrAdd(client, stream => new OrderedSender(
+                    text => SendDataWithLength(stream, MessageToBuffer(text)),
+                    error => HandleConnectionFailure(stream, "Error sending event: " + error.Message))).Enqueue(json);
             }
+            catch (Exception error) { HandleConnectionFailure(client, error.Message); }
         }
 
         protected virtual void HandleConnectionFailure(ISocketStream stream, string message)
         {
             // After a partial write the framing cannot safely be reused.
+            if (senders.TryRemove(stream, out var sender)) sender.Stop();
             stream.Close();
             Log(message);
         }
@@ -278,6 +306,7 @@ namespace TimberNet
             while (client.Connected && !IsStopped)
             {
                 if (!TryReadLength(client, out int messageLength)) break;
+                if (messageLength < 0 || messageLength > 256 * 1024 * 1024) throw new IOException("Invalid multiplayer frame length.");
 
                 // First message is always the file
                 if (messageCount == 0 && isClient)
@@ -309,6 +338,12 @@ namespace TimberNet
                 {
                     sessionFaults.Enqueue("A peer could not replay a multiplayer action. Reload a known-good save before rehosting.");
                     return;
+                }
+                if ((string?)control[TYPE_KEY] == "SessionControl")
+                {
+                    controls.Enqueue((client, control));
+                    messageCount++;
+                    continue;
                 }
                 //Log($"Queuing message of length {messageLength} bytes");
                 receivedEventQueue.Enqueue(control);
@@ -421,9 +456,10 @@ namespace TimberNet
         /**
          * Updates, processing queued logs, maps and events.
          */
-        public void Update()
+        public virtual void Update()
         {
             ProcessLogs();
+            while (controls.TryDequeue(out var control)) OnControl?.Invoke(control.Stream, control.Message);
             while (sessionFaults.TryDequeue(out string? fault)) OnSessionFault?.Invoke(fault);
             // UI subscribers must only run on the caller's update thread.
             while (errorQueue.TryDequeue(out string? error)) OnError?.Invoke(error);

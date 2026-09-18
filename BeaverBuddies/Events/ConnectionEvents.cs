@@ -25,6 +25,7 @@ namespace BeaverBuddies.Events
 
         public override void Replay(IReplayContext context)
         {
+            SnapshotResyncService.InitializedClient();
             //context.GetSingleton<ReplayService>().SetServerMapName(mapName);
             string warningMessage = null;
             if (serverGameVersion != GameVersions.CurrentVersion.ToString())

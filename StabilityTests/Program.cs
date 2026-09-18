@@ -87,7 +87,7 @@ var tests = new (string Name, Action Run)[]
         var net = new TimberClient(stream); int errors = 0; int callbackThread = 0;
         net.OnError += _ => { errors++; callbackThread = Environment.CurrentManagedThreadId; };
         Task.Run(() => net.DoUserInitiatedEvent(Message())).GetAwaiter().GetResult();
-        Check(net.IsStopped); Check(!stream.Connected); Equal(0, errors);
+        Check(SpinWait.SpinUntil(() => net.IsStopped && !stream.Connected, 1000)); Equal(0, errors);
         net.Update(); Equal(1, errors); Equal(Environment.CurrentManagedThreadId, callbackThread);
         Check(!net.ShouldTick); net.Update(); Equal(1, errors);
     }),
@@ -118,7 +118,7 @@ var tests = new (string Name, Action Run)[]
         finally { BeaverBuddies.IO.EventIO.IsNull = false; }
     })
 };
-tests = tests.Concat(Preview5Checks.Tests()).Concat(PerformanceChecks.Tests()).ToArray();
+tests = tests.Concat(Preview5Checks.Tests()).Concat(PerformanceChecks.Tests()).Concat(SendingChecks.Tests()).Concat(TcpRecoveryChecks.Tests()).ToArray();
 foreach (var test in tests)
 {
     try

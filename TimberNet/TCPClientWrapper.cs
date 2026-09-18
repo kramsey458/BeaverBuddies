@@ -47,7 +47,6 @@ namespace TimberNet
         {
             try
             {
-                client.GetStream().Close();
                 client.Close();
             }
             catch { }

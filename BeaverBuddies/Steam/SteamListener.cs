@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading;
 using TimberNet;
@@ -13,7 +14,8 @@ namespace BeaverBuddies.Steam
         public CSteamID LobbyID { get; private set; }
 
         private List<IDisposable> callbacks = new List<IDisposable>();
-        private ConcurrentQueueWithWait<SteamSocket> joiningUsers = new ConcurrentQueueWithWait<SteamSocket>();
+        private readonly BlockingCollection<SteamSocket> joiningUsers = new BlockingCollection<SteamSocket>();
+        private bool stopped;
         private SteamPacketListener steamPacketListener;
 
         public SteamListener()
@@ -62,6 +64,7 @@ namespace BeaverBuddies.Steam
 
         private void OnLobbyChatUpdate(LobbyChatUpdate_t callback)
         {
+            if (stopped || callback.m_ulSteamIDLobby != LobbyID.m_SteamID) return;
             Plugin.Log("Lobby chat update: " + callback.m_ulSteamIDLobby);
             if ((callback.m_rgfChatMemberStateChange & (uint)EChatMemberStateChange.k_EChatMemberStateChangeEntered) != 0)
             {
@@ -73,7 +76,8 @@ namespace BeaverBuddies.Steam
 
                 var socket = new SteamSocket(userJoined, true);
                 socket.RegisterSteamPacketListener(steamPacketListener);
-                joiningUsers.Enqueue(socket);
+                try { joiningUsers.Add(socket); }
+                catch (InvalidOperationException) { socket.Close(); }
             }
         }
 
@@ -81,13 +85,17 @@ namespace BeaverBuddies.Steam
         {
             Plugin.Log("Waiting to accept a client...");
             SteamSocket socket;
-            while (!joiningUsers.WaitAndTryDequeue(out socket)) { }
+            try { socket = joiningUsers.Take(); }
+            catch (InvalidOperationException error) { throw new IOException("Steam listener stopped.", error); }
             Plugin.Log("New client accepted!");
             return socket;
         }
 
         public void Stop()
         {
+            stopped = true;
+            joiningUsers.CompleteAdding();
+            while (joiningUsers.TryTake(out var pending)) pending.Close();
             Plugin.Log("Stopping SteamListener...");
             SteamMatchmaking.LeaveLobby(LobbyID);
             foreach (IDisposable callback in callbacks)
