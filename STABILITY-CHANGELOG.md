@@ -18,8 +18,7 @@ Preview 4 was built against Timberborn 1.1.2.4.
   Coalesce repeated requests; do not reset devices every frame or change saved
   keybindings. Service is registered only in multiplayer scenes.
 - 83 automated checks passed; Release Steam build succeeded. Native device reset
-  is mocked in regression tests. Live confirmation of the stuck-controls report
-  remains pending; this is a targeted recovery measure, not a proven root cause.
+  is mocked in regression tests. The fork owner reports that the current build works well in multiplayer. This recovery measure does not establish the original input fault root cause.
 
 ## Preview 7 — 1.1.0-stability.7
 
@@ -330,4 +329,5 @@ Other game versions and combinations of mods may still have unrelated problems.
 No Housing Optimize changes are included. Upstream authorship and GPL licensing
 
 are preserved in `License.txt` and the repository history.
+
 
