@@ -1,13 +1,18 @@
 # BeaverBuddies
 
-## Stability fork — Preview 6
+## Stability fork — Preview 7
 
-This fork contains the cumulative stability changes through **1.1.0-stability.6**,
+This fork contains the cumulative stability changes through **1.1.0-stability.7**,
 based on [thomaswp/BeaverBuddies](https://github.com/thomaswp/BeaverBuddies)'s
 `v1.1` branch at `a13b1f20dacb6e30efa967cc8ac83e73779c0755`.
 It was built against Timberborn **1.1.2.4**. The fork owner has confirmed that
 Preview 4 resolved the reported multiplayer badtide desync in their playtest.
 This is not a guarantee against every possible desync or mod interaction.
+
+Preview 7 makes equal-distance demolition selection deterministic in multiplayer
+using persistent target IDs. It adds selection diagnostics for further investigation.
+The reported incident is consistent with a job-selection issue, but this patch
+has not yet been confirmed by multiplayer playtesting.
 
 Preview 6 reduces diagnostic allocations, event-backlog processing, duplicate
 JSON parsing and routine logging overhead. The fork owner confirmed Preview 6 works well in multiplayer playtesting.
@@ -28,8 +33,8 @@ to the upstream project, not this fork's preview builds.
 
 ### Tests
 
-The Preview 6 validation run passed **71 checks**: 28 transport/replay/animation
-checks, 41 compiled mod/game checks, and two Python snapshot-comparison checks.
+The Preview 7 validation run passed **77 checks**: 28 transport/replay/animation
+checks, 47 compiled mod/game checks, and two Python snapshot-comparison checks.
 The optional live Harmony-installation fixture is not included in that count;
 see the changelog for its test-runtime limitation.
 See [StabilityTests/README.md](StabilityTests/README.md) for commands and required

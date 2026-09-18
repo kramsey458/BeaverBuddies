@@ -10,6 +10,18 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## Preview 7 — 1.1.0-stability.7
+
+- Choose exactly equal-distance demolition jobs by persistent entity ID in
+  multiplayer. Preserve nearer-job preference, eligibility, priority and
+  reservation rules; retain vanilla single-player behavior.
+- Record selected target IDs and distances in detailed traces. Include up to
+  eight eligible candidates in verbose local logs without treating harmless
+  candidate-order differences as synchronized trace mismatches.
+- 77 checks passed, including six new demolition selection checks. Release Steam
+  build succeeded. Multiplayer playtesting is still required; the original
+  Preview 6 logs did not prove an equal-distance tie caused that incident.
+
 ## Preview 6 — 1.1.0-stability.6
 
 
@@ -256,7 +268,7 @@ seconds rather than local frame duration, so its timing can differ from upstream
 
    replacing the prior `BeaverBuddies-StabilityPreview` files.
 
-3. Enable **BeaverBuddies - Stability Preview**, version **1.1.0-stability.6**, on
+3. Enable **BeaverBuddies - Stability Preview**, version **1.1.0-stability.7**, on
 
    both computers. Disable Workshop BeaverBuddies and duplicate local previews.
 
