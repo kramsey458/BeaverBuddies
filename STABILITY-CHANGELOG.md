@@ -10,6 +10,17 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## Preview 8 — 1.1.0-stability.8
+
+- Recover input on desync notification and multiplayer scene load, including
+  direct-IP Save and rehost, using the game's built-in device reset.
+- Defer recovery to Update and consume cached held/down/release binding state.
+  Coalesce repeated requests; do not reset devices every frame or change saved
+  keybindings. Service is registered only in multiplayer scenes.
+- 83 automated checks passed; Release Steam build succeeded. Native device reset
+  is mocked in regression tests. Live confirmation of the stuck-controls report
+  remains pending; this is a targeted recovery measure, not a proven root cause.
+
 ## Preview 7 — 1.1.0-stability.7
 
 - Choose exactly equal-distance demolition jobs by persistent entity ID in
@@ -268,7 +279,7 @@ seconds rather than local frame duration, so its timing can differ from upstream
 
    replacing the prior `BeaverBuddies-StabilityPreview` files.
 
-3. Enable **BeaverBuddies - Stability Preview**, version **1.1.0-stability.7**, on
+3. Enable **BeaverBuddies - Stability Preview**, version **1.1.0-stability.8**, on
 
    both computers. Disable Workshop BeaverBuddies and duplicate local previews.
 

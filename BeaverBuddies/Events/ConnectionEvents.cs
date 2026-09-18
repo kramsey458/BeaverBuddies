@@ -135,6 +135,7 @@ namespace BeaverBuddies.Events
         public override void Replay(IReplayContext context)
         {
             ReplayService replayService = context.GetSingleton<ReplayService>();
+            context.GetSingleton<BeaverBuddies.Fixes.MultiplayerInputRecovery>()?.RequestReset();
             replayService.SetTargetSpeed(0);
             BeaverBuddies.DesyncDetecter.WaterDiagnostics.WriteOnDesync();
             ReportingService reportingService = context.GetSingleton<ReportingService>();
