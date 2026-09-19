@@ -10,6 +10,37 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## Preview 17 — 1.1.0-stability.17
+
+Built on Preview 8. Previews 9-16 are deprecated and are not included.
+
+- Show other players' translucent, colored cursors with names, remote selection
+  outlines in each player's color, and **Viewing / Editing** labels on buildings.
+  See `PLAYER-ACTIVITY.md`.
+- Add an in-game **Player cursors** dialog (Options menu) to set, per connected
+  player, the cursor's color (their color, presets or exact RGB), size (50%-300%)
+  and transparency (0%-90%). Choices are local, applied live, and remembered by
+  player name in `BeaverBuddiesCursorStyles.json`.
+- Add the **Player activity indicators** setting (on by default).
+- Activity uses its own lane on the existing connection, separate from the replay
+  script and desync hash: host-assigned identities, latest-wins coalescing, no
+  game-thread blocking, and nothing sent to a guest until its join has finished.
+- Fix a multiplayer crash in `ClearResourcesMarkedEvent`: a replayed demolition
+  selection was looked up entity by entity with no null check, so if builders had
+  already demolished some of the selected entities before the event arrived (it was
+  stamped for tick 1771 and replayed at 1773), a `NullReferenceException` aborted the
+  whole session. Missing entities are now skipped with a warning, the same way
+  `BuildingsDeconstructedEvent` does, and an event with nothing left is skipped.
+  The host re-stamps and forwards events at its own tick, so both sides skip the same
+  entities and stay in sync. The regression check replays a stale selection against a
+  real empty entity registry and fails on the old code.
+- Not covered: a selection where only some entities are missing needs live Unity
+  objects, so it is untested, and the fix has not been confirmed in a live session.
+  `DuplicationEvent` has the same kind of weak spot and is left unchanged.
+- 50 StabilityTests, 55 RuntimeChecks and 2 Python checks pass; Release Steam build
+  succeeds. Cursor rendering and the dialog's layout are not covered by automated
+  tests and need a two-player playtest.
+
 ## Preview 8 — 1.1.0-stability.8
 
 - Recover input on desync notification and multiplayer scene load, including
