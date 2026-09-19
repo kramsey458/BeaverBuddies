@@ -1,60 +1,151 @@
-# BeaverBuddies
+# BeaverBuddies — Stability Fork
 
-## Stability fork — 1.1.1 (Preview 17)
+Multiplayer co-op for Timberborn, with **Steam friend invites**, an **in-game connection panel**, and a long list of crash and desync fixes.
 
-This fork contains the cumulative stability changes through **1.1.1**,
-based on [thomaswp/BeaverBuddies](https://github.com/thomaswp/BeaverBuddies)'s
-`v1.1` branch at `a13b1f20dacb6e30efa967cc8ac83e73779c0755`.
-It was built against Timberborn **1.1.2.4**. The fork owner has confirmed that
-Preview 4 resolved the reported multiplayer badtide desync in their playtest.
-This is not a guarantee against every possible desync or mod interaction.
+**Latest release: [1.1.3](https://github.com/kramsey458/BeaverBuddies-Multiplayer-Stability-Fork/releases/latest)** · built for Timberborn **1.1.2.4** · tested on Windows with the Steam version of the game · GPL-3.0
 
-Release 1.1.1 (Preview 17) is built directly on Preview 8. Previews 9 through 16 are deprecated
-and are not part of this line, so none of their changes are included.
+This is an independent fork of [thomaswp/BeaverBuddies](https://github.com/thomaswp/BeaverBuddies), the original multiplayer mod. It keeps everything the original does (players build one colony together in real time, each with their own camera and interface, multi-start maps, map pings, hosting and joining from the in-game menus) and builds on top of it. All credit for the multiplayer design belongs to the original project. Please report problems with *this fork* here, not to the original project.
 
-1.1.1 adds player activity indicators: other players' colored, translucent
-cursors, remote selection outlines, and Viewing/Editing labels on buildings, plus an
-in-game **Player cursors** dialog to set each player's cursor color, size and
-transparency locally. See [PLAYER-ACTIVITY.md](PLAYER-ACTIVITY.md). It also fixes a
-multiplayer crash where replaying an area selection that included entities already
-demolished ended the session. The fork owner reported that this release works very
-well in multiplayer playtesting. The crash fix is covered by a regression check but
-has not been confirmed in a live session.
+## Highlights
 
-Preview 8 adds input-state recovery after desync and multiplayer scene loading,
-including direct-IP rehosting. This targets stuck controls and requires a live
-playtest to confirm the reported symptom is resolved.
+- **Steam invites work.** Invite a Steam friend from Steam's own overlay and they join with a click: no Hamachi, no port forwarding. Confirmed in real playtests with a friend over Steam. Direct IP still works, and you can offer both at once.
+- **A connection panel in the game.** See who is connected, each player's ping, whether you are in sync, the tick rate and more, in a small panel you can collapse or hide.
+- **See what your teammates are doing.** Colored, translucent cursors, selection outlines, and "Viewing / Editing" labels on buildings, with per-player cursor color, size and transparency.
+- **Fewer crashes and desyncs.** Specific, documented fixes for water, animation, random numbers, saving, demolition and input problems (details [below](#how-this-fork-improves-on-the-original)). This reduces known causes; it is **not** a guarantee that a desync can never happen.
+- **Mismatched builds are caught early.** Joining with a different build is refused before the save is sent, with a message that says what to do, instead of failing halfway through.
+- **Failures are explained.** A failed connection or multiplayer action ends with a plain-language reason (including Steam's own error code) instead of a silent hang.
+- **Tested.** 144 automated checks, including runs against the game's own assemblies. See [Testing](#testing-and-verification).
 
-Preview 7 makes equal-distance demolition selection deterministic in multiplayer
-using persistent target IDs. It adds selection diagnostics for further investigation.
-The reported incident is consistent with a job-selection issue, but this patch
-has not yet been confirmed by multiplayer playtesting.
+## Install
 
-Preview 6 reduces diagnostic allocations, event-backlog processing, duplicate
-JSON parsing and routine logging overhead. The fork owner confirmed Preview 6 works well in multiplayer playtesting.
+**You need:** Timberborn (this release is built and tested against **1.1.2.4**), with the **Harmony** and **Mod Settings** mods enabled. Every player must run the same game version too.
 
-Preview 5 adds build compatibility checking, stops replay after failed actions,
-and makes remaining RNG scopes exception-safe. The fork owner has confirmed Preview 5 works well in their two-player playtest.
+1. Download `BeaverBuddies-stability-1.1.3.zip` from the [latest release](https://github.com/kramsey458/BeaverBuddies-Multiplayer-Stability-Fork/releases/latest).
+2. **Close Timberborn.**
+3. Extract the zip and copy the `BeaverBuddies-StabilityPreview` folder into `Documents\Timberborn\Mods`, replacing any older copy.
+4. Start Timberborn and enable **BeaverBuddies - Stability Preview** (v1.1.3) in the mod list. **Disable the Workshop BeaverBuddies and any other BeaverBuddies copy**: they share the same mod ID and will conflict.
+5. **Every player must install the exact same download** and restart the game. This is the most common cause of trouble; see [Things to know](#things-to-know-before-you-play).
 
-Preview 4 corrects a depth-limited water source that used render-frame duration
-to advance gameplay state. It uses the configured simulation tick interval in
-multiplayer instead. Earlier improvements cover animation crashes, network
-packet handling, random-state scopes, save-state cleanup, water-source ordering,
-and local desync diagnostics.
+This fork is distributed through GitHub Releases only. The Steam Workshop and mod.io pages linked further down belong to the original project.
 
-See [STABILITY-CHANGELOG.md](STABILITY-CHANGELOG.md) for the full cumulative
-changelog, installation instructions and validation limits. The original
-project and GPL license are retained; the Workshop and wiki links below refer
-to the upstream project, not this fork's preview builds.
+## Host and join
 
-### Tests
+**Host**
+1. Load the save you want to play and choose **Host co-op game**.
+2. Bring your friends in: for Steam choose **Invite Friends**; for direct IP give them your IP address (default port **25565**, which must be forwarded, or use a VPN such as Hamachi).
+3. When your friends appear in the connected-player list, choose **Start Game**.
 
-The 1.1.1 validation run passed **107 checks**: 50 transport/replay/animation/activity
-checks, 55 compiled mod/game checks, and two Python snapshot-comparison checks.
-The optional live Harmony-installation fixture is not included in that count;
-see the changelog for its test-runtime limitation.
-See [StabilityTests/README.md](StabilityTests/README.md) for commands and required
-local game/Harmony assemblies. Those proprietary assemblies are not included.
+**Join**
+- **Steam:** accept the invite. If Timberborn is closed, Steam launches it and joins for you. With **Allow Friends to Join Directly via Steam** on, a friend can also use **Join Game** from Steam's friends list.
+- **Direct IP:** from the main menu choose **Join co-op game** and enter the host's IP address or domain name.
+
+Guests receive a copy of the host's save (kept under **Online Games**). Nobody can join after the host chooses **Start Game**.
+
+**If a desync happens:** the host chooses **Save and Rehost**. Steam guests accept a fresh invite; direct-IP guests reconnect.
+
+## Steam invites
+
+Steam friend invites are a first-class way to play, alongside direct IP.
+
+- **Requirements:** both players online in Steam, both owning Timberborn, and both running the exact same build.
+- **Settings** (Mod Settings → BeaverBuddies): **Enable Steam Networking** and **Allow Friends to Join Directly via Steam**.
+- **Who can join:** the host opens a friends-only Steam lobby, and only players who joined that lobby are accepted. A stranger who knows your Steam ID cannot connect.
+- **How it works:** connections go straight between players when Steam can find a route and are otherwise relayed through Steam's network. Valve documents that relaying keeps players' IP addresses hidden from each other. The original used Valve's older networking API, which Valve now marks as deprecated; this fork uses the current one.
+- **If Steam has a problem,** hosting over direct IP still works. If joining hangs on "Receiving map...", the two players are almost certainly running different builds.
+- **Status:** confirmed working in real playtests between the maintainer and a friend. More details, including how to read the log if something fails, are in [STEAM-INVITES.md](STEAM-INVITES.md).
+
+## The connection panel
+
+A small panel appears in the top-left corner during a multiplayer game.
+
+| It shows | Meaning |
+| --- | --- |
+| **Players** | Everyone in the session, host first. |
+| **Ping** | Round-trip time to the host. Green dot: 80 ms or less. Yellow: up to 160 ms. Red: higher, or "No response". Grey "...": not measured yet. |
+| **Sync status** | In sync, Catching up, Waiting for host, Connection unstable, Out of sync, or Disconnected. |
+| **Tick rate and speed** | Simulation ticks per second right now, and the game speed or Paused. |
+| **Behind host** | Guests only: how many ticks this game is behind the host (0 or 1 is normal). |
+| **Connection** | Direct or Steam. |
+
+- **Collapse it** by clicking its title; it shrinks to one line and remembers your choice.
+- **Hide it or move it** in Mod Settings → BeaverBuddies: **Connection panel** (Expanded / Collapsed / Hidden) and **Connection panel position** (any corner).
+- **Optional key:** bind **Toggle connection panel** under Options → Bindings → BeaverBuddies. It is unbound until you choose a key.
+
+Ping is measured by the network layer (a tiny probe once a second), so it means the same thing over Steam, Hamachi and direct IP, and it never touches the game simulation. Full details: [CONNECTION-PANEL.md](CONNECTION-PANEL.md).
+
+## How this fork improves on the original
+
+This is an analysis of the [changelog](STABILITY-CHANGELOG.md), the release notes and the commit history against the original project's `v1.1` branch at the point this fork branched (commit `a13b1f2`, 24 August 2026). Since then the fork has changed 78 files (about 8,000 lines added). As of September 2026 the original's `v1.1` branch has not moved since that commit, so this comparison is current.
+
+Each item says how well it is confirmed: **confirmed** means the maintainer verified it in a real multiplayer playtest; **tested** means it is covered by automated regression checks but has not been confirmed in a live session.
+
+**Connections and Steam**
+
+- **Steam networking rebuilt on Valve's current API** (1.1.3). The original used the older, deprecated API, with a fixed 128 KB/s cap on the save transfer. Failures now end with Steam's own reason in plain language, and a Steam problem can no longer stop direct-IP hosting. *Confirmed with a real Steam friend.*
+- **Steam packet handling hardened** (1.1.0-stability.1). The original's own code comment says its Steam read routine "will fail" if a packet is read in pieces. The fork now keeps unread data, checks read ranges, wakes blocked readers when a connection closes, rejects failed sends, and locks each network frame so a header and its payload can never be interleaved. *Tested.*
+- **Mismatched builds refused up front** (stability.5). The original only warned about a version mismatch after the save had loaded. The fork checks the game version and the exact mod build before the save is transferred, with a time limit and a clear message. *Tested.*
+- **A failed multiplayer action stops safely** (stability.5). Replay stops after a failed action, pending actions are discarded, the session pauses and peers are told, so two games do not quietly drift apart. Connection cleanup bugs were fixed at the same time. *Tested.*
+
+**Desyncs and determinism**
+
+- **Water no longer depends on frame rate** (stability.4). The depth-limited water source advanced using render-frame time, so players at different frame rates saw different water. It now uses the simulation tick interval in multiplayer. *Confirmed: resolved a reported "badtide" desync.*
+- **Water sources applied in a consistent order** (stability.3). With several sources affecting one column, the installed game produced three different results across six registration orders; the fork produces one. This was not established as the cause of the badtide desync. *Tested.*
+- **Stale saving flag fixed** (stability.2). A flag could stay set after an exit save, making one player skip a moisture calculation, consistent with reported desyncs right at join. *Tested.*
+- **Random-number bookkeeping made safe** (stability.1 and .5). Nested random-number scopes are counted correctly and restored even when an error interrupts them. *Tested.*
+- **Equal-distance demolition jobs chosen deterministically** (stability.7), by persistent target IDs. *Tested; not yet confirmed in a playtest.*
+- **Entity ID collisions handled explicitly** (stability.1): a regenerated ID is now applied, and the game fails with a clear error if no unique ID can be found. *Tested.*
+- **Stuck-controls recovery** (stability.8). Input state is reset after a desync and when a multiplayer game loads. This is a targeted recovery measure: its root cause was not proven and the original report has not been confirmed fixed. *Tested with a mocked device reset.*
+
+**Crashes**
+
+- **Animation crash** (stability.1): a path cursor that could move backward between ticks, and non-finite visual coordinates, are handled. *Confirmed.*
+- **Demolition-selection crash** (1.1.1): replaying an area selection that included buildings already demolished used to end the whole session. Missing ones are now skipped. *Tested; not yet confirmed in a live session.*
+
+**Awareness and usability**
+
+- **Player activity** (1.1.1): other players' cursors, selection outlines, and Viewing / Editing labels, plus a **Player cursors** dialog (Options menu) for each player's color, size and transparency. See [PLAYER-ACTIVITY.md](PLAYER-ACTIVITY.md). *Confirmed.*
+- **Steam invites and the connection panel** (1.1.3), described above. *Confirmed.*
+
+**Performance** (stability.6): fewer allocations from diagnostics, faster handling of the event backlog, one JSON parse per network message instead of two, and routine logging skipped unless needed. In synthetic tests, 4,000 ordered event inserts went from about 439 ms to under 1 ms, and 16 diagnostic captures stopped allocating about 85 MB. These are not frame-rate measurements. *Confirmed to play well in a two-player playtest.*
+
+**What the fork does not change.** It does not make desyncs impossible, and it has not been tried on more than two players. Everything the original provides (multi-start maps, pings, the pause-reduction setting, hosting and joining from the menus) is still there.
+
+## Things to know before you play
+
+- **Everyone must run the exact same build.** The mod compares the game version and the mod's own files when someone joins. A copy someone compiled themselves can be refused even when the version number matches. If one player is on a different build over Steam, joining can look like it is hanging on "Receiving map...".
+- **Other mods and settings are not checked.** Only the game and BeaverBuddies are compared. Every player should have the same mods at the same versions, and settings that affect the simulation (for example **Reduce the number of forced pauses**) should match. A mismatched third-party mod is a classic cause of desyncs.
+- **Join before the host starts.** Nobody can join a game that has already started. After a desync the host uses **Save and Rehost**.
+- **Desyncs can still happen.** This fork reduces known causes, not all of them.
+- **Tested with two players**, on Windows, with the Steam version of Timberborn 1.1.2.4. Other stores, platforms and larger groups have not been tested by this fork. Steam invites need the Steam version of the game.
+- **"Post Bug Report" does not upload in this fork's builds.** The original's automatic upload needs an access token that these builds do not contain. If you hit a problem, keep the `Player.log` files from both players (`%USERPROFILE%\AppData\LocalLow\Mechanistry\Timberborn`). **Always Use Detailed Logging** captures more but costs some performance; any diagnostic ZIPs are saved in the `BeaverBuddiesDiagnostics` folder next to the log.
+- **Only one BeaverBuddies at a time.** This fork and the Workshop version use the same mod ID.
+- **New text is English only.** Other languages fall back to English for the strings added by this fork.
+- **Not a Workshop mod.** Update by downloading a new release and replacing the folder; there is no automatic update.
+
+## Testing and verification
+
+The 1.1.3 validation run passed **144 checks**: **87** in `StabilityTests` (network transport, the Steam transport against a simulated Steam network, protocol parity between direct and Steam connections, player activity, ping measurement and the panel), **55** in `RuntimeChecks` (the compiled mod running against the game's own assemblies: random-number scopes, water simulation, demolition, input recovery), and **2** Python snapshot-comparison checks. Both Steam and non-Steam builds compile with no warnings.
+
+These checks cannot start Unity or prove full multiplayer determinism, and they need the game installed locally (no proprietary game files are included in this repository). See [StabilityTests/README.md](StabilityTests/README.md) for how to run them. The maintainer's real playtests, described above, are what confirm behavior in the live game.
+
+## Release history and credits
+
+| Version | What it added |
+| --- | --- |
+| **1.1.3** | Steam invites on Valve's current API, and the connection panel. |
+| **1.1.1** | Player activity (cursors, selections, Viewing / Editing), per-player cursor settings, and the demolition-selection crash fix. Called "Preview 17" while in testing. |
+| 1.1.0-stability.8 | Input recovery after a desync and on multiplayer load. |
+| 1.1.0-stability.7 | Deterministic choice between equal-distance demolition jobs. |
+| 1.1.0-stability.6 | Performance improvements. |
+| 1.1.0-stability.5 | Build compatibility check, safe stop after a failed action, safer random numbers. |
+| 1.1.0-stability.4 | Water no longer depends on frame rate. |
+| 1.1.0-stability.1 to .3 | Animation crash, Steam packet handling, saving-flag and water-ordering fixes, diagnostics. |
+
+There was no 1.1.2 release: it existed only as the test build `1.1.2-steam.1`, whose changes are part of 1.1.3. Tags numbered `v1.1.0-stability.9` to `.16` are from an abandoned line and are not part of this history. The full details are in [STABILITY-CHANGELOG.md](STABILITY-CHANGELOG.md).
+
+Thank you to the original BeaverBuddies authors and contributors, whose work this fork builds on. Their license (GPL-3.0) and authorship are preserved in [License.txt](License.txt) and the repository history.
+
+*Below the line is the original project's developer README, kept as it was. Its badges, Workshop, mod.io, wiki and Discord links, and the clone address in "How to Build", refer to the original project, not to this fork. To build this fork, clone this repository instead.*
 
 ---
 
