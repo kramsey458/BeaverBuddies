@@ -103,7 +103,7 @@ namespace TimberNet
                                 return;
                             }
 
-                            if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, true);
+                            if (CompatibilityIdentity != null) RunCompatibilityHandshake(client, true);
                             if (IsStopped || !IsAcceptingClients) { client.Close(); return; }
                             await SendMap(client);
                             SendState(client);

@@ -5,6 +5,39 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
+## 1.0.3
+
+Every player should install this build: it exchanges a little extra information when someone
+joins, so it will not join a session with an earlier version.
+
+### Mod list warning
+
+- When a player joins, the host and the guest each send the other their list of enabled mods
+  (ID, name and version) as part of the compatibility handshake, and each compares the two
+  lists. If they differ, both players are shown a warning that names the mods that are on only
+  one computer or at different versions. The host sees it in the lobby, before choosing Start
+  Game; the guest sees it as soon as the game has loaded. It is also written to `Player.log`.
+- It is only a warning and never stops anyone joining: mods that only change the interface are
+  harmless, and only the players can tell which mods matter. It exists because a mod that acts
+  on one computer only makes the games drift apart into a desync: in a real session one player
+  had an extra housing mod, which switched another housing mod off on their computer alone. The
+  join check only compared this mod and the game, so nothing said so.
+- The exchange happens after the build check has passed, on the same connection and inside the
+  same time limit, so a different build is still refused before any mod list is sent. The list
+  is bounded (32 KB compressed, at most 300 mods, names shortened and stripped of control
+  characters), and anything unreadable is ignored: a malformed or oversized list can never end
+  the session or put odd text in the warning. If a computer cannot read its own mod list it
+  sends a marker the other side ignores, so nobody is told that every mod differs.
+- The warning text is English only for now; other languages show the English text.
+
+### Validation
+
+- Release Steam and non-Steam builds succeed with no warnings. 116 StabilityTests (nineteen
+  new: the list format and its limits, the comparison, the message, the exchange during the
+  handshake including a refused build and an oversized list, and real host and guest sessions),
+  64 RuntimeChecks (five new, using the game's own mod objects) and 2 Python checks pass.
+- The warning has not yet been seen in a running game.
+
 ## 1.0.2
 
 Every player should install this build: the game warns when mod versions differ, and mixed
@@ -252,13 +285,13 @@ The first official release of this fork. See `STEAM-INVITES.md`, `CONNECTION-PAN
 ## Installation
 
 1. Fully close Timberborn on every computer.
-2. Download `BeaverBuddies-Stability-Fork-1.0.2.zip` from the
+2. Download `BeaverBuddies-Stability-Fork-1.0.3.zip` from the
    [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest),
    extract it, and copy the `BeaverBuddies-Stability-Fork` folder into
    `Documents/Timberborn/Mods`. If you installed an earlier download, delete its old
    `BeaverBuddies-StabilityPreview` folder first: the two share a mod ID and would conflict.
 3. Make sure **Harmony** and **Mod Settings** are enabled, then enable **BeaverBuddies -
-   Stability Fork**, version **1.0.2**, on every computer. Disable the Workshop
+   Stability Fork**, version **1.0.3**, on every computer. Disable the Workshop
    BeaverBuddies and any duplicate local copies: they share one mod ID.
 4. Every player must use the same build. Test on a copied save first.
 
@@ -274,10 +307,10 @@ comparison commands.
 
 ## Validation and limits
 
-The 1.0.2 validation run passed **158 checks**: 97 in `StabilityTests` (network transport,
+The 1.0.3 validation run passed **182 checks**: 116 in `StabilityTests` (network transport,
 the Steam transport against a simulated Steam network, direct-versus-Steam protocol parity,
-animation, player activity, ping measurement, the connection panel and the guest catch-up
-rule), 59 in
+animation, player activity, ping measurement, the connection panel, the guest catch-up
+rule and the mod list warning), 64 in
 `RuntimeChecks` (the compiled mod running against the game's own assemblies) and two Python
 archive-comparison checks. The mod builds against Timberborn 1.1.2.4 with no warnings.
 Tests require .NET 8; game-dependent checks additionally require the user's installed game
@@ -298,7 +331,7 @@ confirm the reported issues and that this build plays well, not universal determ
 
 Not confirmed in a live session: the demolition-selection crash fix, equal-distance
 demolition tie-breaking and the stuck-controls recovery. Only two players have been tested.
-Everyone in a session must run the identical build; other mods and settings are not
-compared. Text added by this fork is English only. Other game versions and combinations of
+Everyone in a session must run the identical build. Other mods are compared as a warning
+only, and settings are not compared. Text added by this fork is English only. Other game versions and combinations of
 mods may still have unrelated problems. No Housing Optimize changes are included. Upstream
 authorship and GPL licensing are preserved in `License.txt` and the repository history.

@@ -2,6 +2,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using TimberNet;
 using System.Threading.Tasks;
+using BeaverBuddies.Connect;
 using BeaverBuddies.Events;
 using BeaverBuddies.Steam;
 using System.Net.Sockets;
@@ -74,6 +75,10 @@ namespace BeaverBuddies.IO
             }
             //netBase = new TimberServer(port, mapProvider, null);
             NetBase.CompatibilityIdentity = BuildCompatibility.CreateIdentity();
+            // Mod lists are swapped with each joining player and compared; a difference is only a warning.
+            ModWarnings.Clear();
+            NetBase.CompatibilityAdvisory = ModCompatibility.CreateAdvisory();
+            NetBase.OnPeerAdvisory += ModCompatibility.OnPeerAdvisory;
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnLog += Plugin.Log;

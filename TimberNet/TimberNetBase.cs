@@ -19,6 +19,11 @@ namespace TimberNet
     {
         public const int HEADER_SIZE = 4;
         public string? CompatibilityIdentity { get; set; }
+        /// <summary>Optional information sent to the other player once builds match (see CompatibilityHandshake).</summary>
+        public string? CompatibilityAdvisory { get; set; }
+        public delegate void PeerAdvisoryReceived(string? peerName, string advisory);
+        /// <summary>Raised on the update thread with the other player's advisory after a successful handshake.</summary>
+        public event PeerAdvisoryReceived? OnPeerAdvisory;
         public Func<bool>? DetailedLoggingEnabled { get; set; }
         protected bool ShouldLogDetails => DetailedLoggingEnabled?.Invoke() == true;
         public event MessageReceived? OnSessionFault;
@@ -44,6 +49,7 @@ namespace TimberNet
         private readonly ConcurrentQueue<JObject> receivedEventQueue = new ConcurrentQueue<JObject>();
         private readonly ConcurrentQueue<string> logQueue = new ConcurrentQueue<string>();
         private readonly ConcurrentQueue<string> errorQueue = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<(string? Peer, string Advisory)> peerAdvisories = new ConcurrentQueue<(string?, string)>();
         private byte[]? mapBytes = null;
 
         private volatile bool isStopped;
@@ -285,6 +291,16 @@ namespace TimberNet
 
         protected void QueueError(string message) => errorQueue.Enqueue(message);
 
+        /// <summary>
+        /// Runs the build check with this player's identity, and swaps advisories if one is set. The other
+        /// player's advisory is delivered to OnPeerAdvisory on the next Update.
+        /// </summary>
+        protected void RunCompatibilityHandshake(ISocketStream stream, bool server)
+        {
+            string? remote = CompatibilityHandshake.Run(stream, CompatibilityIdentity!, server, advisory: CompatibilityAdvisory);
+            if (remote != null) peerAdvisories.Enqueue((stream.Name, remote));
+        }
+
         protected bool TryReadLength(ISocketStream stream, out int length)
         {
             byte[] headerBuffer;
@@ -493,6 +509,12 @@ namespace TimberNet
             while (sessionFaults.TryDequeue(out string? fault)) OnSessionFault?.Invoke(fault);
             // UI subscribers must only run on the caller's update thread.
             while (errorQueue.TryDequeue(out string? error)) OnError?.Invoke(error);
+            while (peerAdvisories.TryDequeue(out var advisory))
+            {
+                // Optional information: a handler that fails must never end the session.
+                try { OnPeerAdvisory?.Invoke(advisory.Peer, advisory.Advisory); }
+                catch (Exception e) { Log("Ignoring an error handling the other player's compatibility information: " + e.Message); }
+            }
             if (!Started || IsStopped) return;
             ProcessReceivedMap();
             ProcessReceivedEventsQueue();

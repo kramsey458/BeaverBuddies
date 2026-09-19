@@ -75,7 +75,7 @@
             <li>Make sure <b>Harmony</b> and <b>Mod Settings</b> are installed and enabled. The mod needs both.</li>
             <li>Enable <b>BeaverBuddies - Stability Fork</b> in the mod manager and restart the game.</li>
             <li>The mod is built for Timberborn 1.1 (tested on 1.1.2.4). Older game versions will not run it.</li>
-            <li>Open <code>%USERPROFILE%\AppData\LocalLow\Mechanistry\Timberborn\Player.log</code> and search for <code>BeaverBuddies v1.0.2 is loaded!</code>. If it is there, the mod loaded and the problem is elsewhere.</li>
+            <li>Open <code>%USERPROFILE%\AppData\LocalLow\Mechanistry\Timberborn\Player.log</code> and search for <code>BeaverBuddies v1.0.3 is loaded!</code>. If it is there, the mod loaded and the problem is elsewhere.</li>
           </ol>
         </div>
       </details>
@@ -105,6 +105,21 @@
             <li>Replace the <code>BeaverBuddies-Stability-Fork</code> folder, then <b>fully restart</b> Timberborn on every computer.</li>
             <li>Check that the game versions match.</li>
           </ol>
+        </div>
+      </details>
+
+      <details class="q" id="mods-differ">
+        <summary>A warning says my mods and the other player's mods are not the same</summary>
+        <div class="answer">
+          <p class="sub">Why</p>
+          <p>When someone joins, both players' games compare their lists of enabled mods and warn you if any mod is on only one computer or is at a different version. The host sees the warning in the lobby, before starting; a guest sees it as soon as the game has loaded. It is only a warning and nobody is stopped from playing, because the mod cannot tell which mods matter. A mod that changes the simulation (a housing or pathfinding mod, for example) will make the two games drift apart, which is a desync.</p>
+          <p class="sub">Try this</p>
+          <ol>
+            <li>Read which mods are listed: "Only on your computer", "Only on &hellip;'s computer" and "Different versions".</li>
+            <li>Make both lists identical: install and enable the same mods at the same versions on every computer, or turn the listed mods off on both. Mods that only change the interface are usually harmless.</li>
+            <li>Restart Timberborn on the computers you changed, then host again.</li>
+          </ol>
+          <p>The warning is also written to <code>Player.log</code>: search for "Mod lists differ".</p>
         </div>
       </details>
 
@@ -196,7 +211,7 @@
           </ol>
           <p class="sub">Things that cause it</p>
           <ul>
-            <li><b>Different mods, or different mod versions.</b> The mod only compares itself, not your other mods. This is a classic cause.</li>
+            <li><b>Different mods, or different mod versions.</b> The game warns you about this when someone joins (see <a href="#mods-differ">the mod warning</a>), so take that warning seriously. This is a classic cause.</li>
             <li><b>Different settings that affect the simulation</b>, for example <b>Reduce the number of forced pauses</b>. Keep them identical.</li>
           </ul>
           <p>Keep backups of your saves. If it keeps happening, <a href="#logs">collect both players' logs</a>.</p>

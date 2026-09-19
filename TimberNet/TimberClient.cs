@@ -117,7 +117,7 @@ namespace TimberNet
                 {
                     // Transports that connect in the background finish before the handshake clock starts.
                     (client as IConnectionAwaitable)?.WaitForConnection(BackgroundConnectTimeoutMilliseconds);
-                    if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, false);
+                    if (CompatibilityIdentity != null) RunCompatibilityHandshake(client, false);
                     if (!IsStopped) StartListening(client, true);
                 }
                 catch (Exception error) { HandleConnectionFailure(client, error.Message); }

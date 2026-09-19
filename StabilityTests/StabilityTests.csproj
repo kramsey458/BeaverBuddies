@@ -15,5 +15,6 @@
     <Compile Include="$(SourceRoot)/BeaverBuddies/Fixes/AnimationFixes.cs" Link="AnimationFixes.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Activity/PlayerCursorPreferences.cs" Link="PlayerCursorPreferences.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Panel/ConnectionStatusModel.cs" Link="ConnectionStatusModel.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Connect/ModListComparison.cs" Link="ModListComparison.cs" />
   </ItemGroup>
 </Project>
