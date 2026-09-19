@@ -53,6 +53,40 @@ namespace TimberNet
             activityChannel = CreateActivityChannel(stream);
         }
 
+        private sealed class RosterSnapshot
+        {
+            public int You;
+            public List<PeerStatus> Peers = new List<PeerStatus>();
+            public double ReceivedAtMs;
+        }
+
+        private volatile RosterSnapshot? roster;
+        private readonly double startedAtMs = RttTracker.NowMs;
+
+        protected override void HandleStatusFrame(ISocketStream source, string type, JObject message)
+        {
+            if (type == StatusFrames.ProbeType && StatusFrames.TryParseSequence(message, out int sequence))
+            {
+                // Answered on the network thread, not the game thread, so the host measures the network
+                // and not how busy this player's game happens to be.
+                try { SendDataWithLength(client, MessageToBuffer(StatusFrames.Reply(sequence))); }
+                catch (Exception) { /* a dead connection is reported by the reader */ }
+            }
+            else if (type == StatusFrames.RosterType && StatusFrames.TryParseRoster(message, out int you, out List<PeerStatus> peers))
+            {
+                roster = new RosterSnapshot { You = you, Peers = peers, ReceivedAtMs = RttTracker.NowMs };
+            }
+        }
+
+        public override NetworkStatus GetNetworkStatus()
+        {
+            RosterSnapshot? latest = roster;
+            double now = RttTracker.NowMs;
+            double silence = Math.Max(0, now - (latest?.ReceivedAtMs ?? startedAtMs)) / 1000.0;
+            return new NetworkStatus(false, IsStopped, latest?.You ?? -1, silence,
+                (IReadOnlyList<PeerStatus>?)latest?.Peers ?? Array.Empty<PeerStatus>());
+        }
+
         public override void SendActivity(PlayerActivity activity)
         {
             if (IsStopped) return;

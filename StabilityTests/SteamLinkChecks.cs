@@ -530,6 +530,44 @@ static class SteamLinkChecks
             try { rig.Game.Run(() => client.Start()); ParityScript(server, client, () => mapped); }
             finally { rig.Game.Run(() => { server.Close(); client.Close(); }); }
         });
+        yield return ("The connection panel's ping and roster work over Steam, and the link is labelled Steam", () =>
+        {
+            int previous = TimberServer.StatusIntervalMs;
+            TimberServer.StatusIntervalMs = 60;
+            using var rig = new Rig();
+            var listener = new SteamLinkListener(rig.Host, rig.Game.Run, _ => true);
+            var server = new TimberServer(listener, () => Task.FromResult(Pattern(1000)), null) { CompatibilityIdentity = "same" };
+            var client = new TimberClient(rig.ConnectGuestAfterListen(server)) { CompatibilityIdentity = "same" };
+            bool mapped = false; client.OnMapReceived += _ => mapped = true;
+            try
+            {
+                rig.Game.Run(() => client.Start());
+                Check(SpinWait.SpinUntil(() => { server.Update(); client.Update(); Thread.Sleep(1); return mapped; }, 4000), "the save never arrived");
+                NetworkStatus host = server.GetNetworkStatus();
+                Check(SpinWait.SpinUntil(() =>
+                {
+                    server.Update(); client.Update(); Thread.Sleep(1);
+                    host = server.GetNetworkStatus();
+                    return host.Peers.Count == 1 && host.Peers[0].RttMs != null;
+                }, 4000), "the host never measured a ping over Steam");
+                Equal("Steam", host.Peers[0].Transport);
+                Check(host.Peers[0].SilenceSeconds < 2, "a live Steam guest should not be silent");
+                NetworkStatus guest = client.GetNetworkStatus();
+                Check(SpinWait.SpinUntil(() =>
+                {
+                    server.Update(); client.Update(); Thread.Sleep(1);
+                    guest = client.GetNetworkStatus();
+                    return guest.YourPlayerId == 1 && guest.Peers.Count == 1 && guest.Peers[0].RttMs != null;
+                }, 4000), "the guest never received the roster over Steam");
+                Equal("Steam", guest.Peers[0].Transport);
+                Check(!guest.IsHost && guest.HostSilenceSeconds < 2, "the host feed should be fresh");
+            }
+            finally
+            {
+                TimberServer.StatusIntervalMs = previous;
+                rig.Game.Run(() => { server.Close(); client.Close(); });
+            }
+        });
         yield return ("Steam end reasons are described in plain language", () =>
         {
             Check(SteamEndReasons.Describe(5003, "x").Contains("timed out"));

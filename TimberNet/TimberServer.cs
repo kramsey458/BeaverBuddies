@@ -28,6 +28,11 @@ namespace TimberNet
             new ConcurrentDictionary<ISocketStream, ActivityChannel>();
         private int lastPlayerId;
 
+        // How often the host pings each guest and publishes the roster. Adjustable so tests need not wait.
+        public static int StatusIntervalMs = 1000;
+        private readonly ConcurrentDictionary<ISocketStream, RttTracker> trackers = new ConcurrentDictionary<ISocketStream, RttTracker>();
+        private double nextStatusAtMs;
+
         private readonly ISocketListener listener;
 
         private Func<Task<byte[]>> mapProvider;
@@ -136,14 +141,57 @@ namespace TimberNet
                 clients.Add(client);
                 // The host is player 0; the host, not the guest, chooses each guest's id.
                 playerIds[client] = Interlocked.Increment(ref lastPlayerId);
+                trackers[client] = new RttTracker(RttTracker.NowMs);
             }
         }
 
         private void RemoveActivity(ISocketStream client)
         {
             playerIds.TryRemove(client, out _);
+            trackers.TryRemove(client, out _);
             if (activityChannels.TryRemove(client, out ActivityChannel? channel)) channel.Close();
         }
+
+        protected override void HandleStatusFrame(ISocketStream source, string type, JObject message)
+        {
+            // Only a guest's reply to our probe means anything to the host.
+            if (type != StatusFrames.ReplyType || !StatusFrames.TryParseSequence(message, out int sequence)) return;
+            if (trackers.TryGetValue(source, out RttTracker? tracker)) tracker.OnReply(sequence, RttTracker.NowMs);
+        }
+
+        protected override void OnUpdate()
+        {
+            double now = RttTracker.NowMs;
+            if (now < nextStatusAtMs) return;
+            nextStatusAtMs = now + StatusIntervalMs;
+            // Only guests that have finished joining have a channel, so nothing is sent mid-transfer.
+            foreach (var pair in activityChannels)
+            {
+                ISocketStream stream = pair.Key;
+                if (!stream.Connected || !trackers.TryGetValue(stream, out RttTracker? tracker)) continue;
+                if (!playerIds.TryGetValue(stream, out int id)) continue;
+                // Built at write time, so the probe's timestamp is when it really leaves.
+                pair.Value.PostFrame("probe", () => StatusFrames.Probe(tracker.BeginProbe(RttTracker.NowMs)));
+                pair.Value.PostFrame("roster", () => StatusFrames.Roster(id, BuildPeerStatuses()));
+            }
+        }
+
+        private List<PeerStatus> BuildPeerStatuses()
+        {
+            double now = RttTracker.NowMs;
+            var peers = new List<PeerStatus>();
+            foreach (var pair in activityChannels)
+            {
+                ISocketStream stream = pair.Key;
+                if (!stream.Connected || !playerIds.TryGetValue(stream, out int id) || !trackers.TryGetValue(stream, out RttTracker? tracker)) continue;
+                peers.Add(tracker.Snapshot(id, (stream as ITransportInfo)?.TransportName ?? "", now));
+            }
+            peers.Sort((a, b) => a.PlayerId.CompareTo(b.PlayerId));
+            return peers;
+        }
+
+        public override NetworkStatus GetNetworkStatus() =>
+            new NetworkStatus(true, IsStopped, 0, null, BuildPeerStatuses());
 
         protected override void HandleActivity(ISocketStream source, PlayerActivity activity)
         {

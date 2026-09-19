@@ -22,7 +22,7 @@ namespace BeaverBuddies.Steam
     /// <see cref="WaitForConnection"/> is meant to be called on a worker thread.
     /// </para>
     /// </summary>
-    public sealed class SteamLinkSocket : ISocketStream, IConnectionAwaitable, IFailureDescriber
+    public sealed class SteamLinkSocket : ISocketStream, IConnectionAwaitable, IFailureDescriber, ITransportInfo
     {
         /// <summary>Well under Steam's 512 KB message limit, and small enough to keep latency low.</summary>
         public const int MaxMessageBytes = 128 * 1024;
@@ -67,6 +67,7 @@ namespace BeaverBuddies.Steam
         public ulong RemoteSteamId { get; }
         public bool IsIncoming { get; }
         public string Name { get; }
+        public string TransportName => "Steam";
         public int MaxChunkSize => 32 * 1024;
         public int MaxBytesPerSecond => int.MaxValue;
         public string FailureReason { get { lock (gate) return failure; } }

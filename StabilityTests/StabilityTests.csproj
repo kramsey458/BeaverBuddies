@@ -13,5 +13,6 @@
     <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamLinkManager.cs" Link="SteamLinkManager.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Fixes/AnimationFixes.cs" Link="AnimationFixes.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Activity/PlayerCursorPreferences.cs" Link="PlayerCursorPreferences.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Panel/ConnectionStatusModel.cs" Link="ConnectionStatusModel.cs" />
   </ItemGroup>
 </Project>

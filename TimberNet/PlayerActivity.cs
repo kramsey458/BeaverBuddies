@@ -118,7 +118,9 @@ namespace TimberNet
         readonly Action<ISocketStream, JObject> write;
         readonly Action<ISocketStream, string> fail;
         readonly object gate = new object();
-        readonly Dictionary<int, PlayerActivity> pending = new Dictionary<int, PlayerActivity>();
+        // Latest frame per key. Frames are built when they are written, so a timestamp inside one is accurate.
+        readonly Dictionary<string, Func<JObject>> pending = new Dictionary<string, Func<JObject>>();
+        const int MaxPending = PlayerActivity.MaxPlayers + 8;
         bool running, closed;
 
         public ISocketStream Stream => stream;
@@ -128,13 +130,16 @@ namespace TimberNet
             this.stream = stream; this.write = write; this.fail = fail;
         }
 
-        public void Post(PlayerActivity state)
+        public void Post(PlayerActivity state) => PostFrame("activity:" + state.PlayerId, () => state.ToJson());
+
+        /// <summary>Queues a frame, replacing any older frame with the same key.</summary>
+        public void PostFrame(string key, Func<JObject> frame)
         {
             lock (gate)
             {
                 if (closed) return;
-                if (!pending.ContainsKey(state.PlayerId) && pending.Count >= PlayerActivity.MaxPlayers) return;
-                pending[state.PlayerId] = state;
+                if (!pending.ContainsKey(key) && pending.Count >= MaxPending) return;
+                pending[key] = frame;
                 if (running) return;
                 running = true;
             }
@@ -150,16 +155,16 @@ namespace TimberNet
         {
             while (true)
             {
-                PlayerActivity[] batch;
+                Func<JObject>[] batch;
                 lock (gate)
                 {
                     if (closed || pending.Count == 0) { running = false; return; }
                     batch = pending.Values.ToArray();
                     pending.Clear();
                 }
-                foreach (var state in batch)
+                foreach (var frame in batch)
                 {
-                    try { write(stream, state.ToJson()); }
+                    try { write(stream, frame()); }
                     catch (Exception e)
                     {
                         // A failed write may leave a partial frame, so this connection is finished.
