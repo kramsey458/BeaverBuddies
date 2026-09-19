@@ -41,7 +41,7 @@ namespace BeaverBuddies
         public static T GetSingleton<T>()
         {
             Type t = typeof(T);
-            return map.ContainsKey(t) ? (T)map[t] : default(T);
+            return map.TryGetValue(t, out object singleton) ? (T)singleton : default(T);
         }
     }
 

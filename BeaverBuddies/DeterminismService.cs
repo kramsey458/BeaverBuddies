@@ -927,10 +927,21 @@ namespace BeaverBuddies
         // Holding the (unused) detour reference keeps it active.
         private static SimpleNativeDetour detour;
         private static float time = 0;
+        // Time.fixedDeltaTime is a Unity project setting that neither the game nor Unity changes
+        // while playing, so read it once per tick instead of once per animated character per
+        // frame. NaN until the first tick.
+        private static float tickLength = float.NaN;
+
+        /// <summary>The value the patched Time.time returns in multiplayer, as a plain managed float.</summary>
+        public static float SimulationTime => time;
+
+        /// <summary>Time.fixedDeltaTime, without the native call.</summary>
+        public static float TickLength => float.IsNaN(tickLength) ? Time.fixedDeltaTime : tickLength;
 
         public static void SetTicksSinceLoaded(int ticks)
         {
-            time = ticks * Time.fixedDeltaTime;
+            tickLength = Time.fixedDeltaTime;
+            time = ticks * tickLength;
         }
 
         public static void Install() {
@@ -1002,8 +1013,14 @@ namespace BeaverBuddies
                 EntityUpdateHash = TimberNetBase.CombineHash(EntityUpdateHash, entity.EntityId.GetHashCode());
 
                 var entityComponent = entity._entityComponent;
+                // Only characters that move have a MovementAnimator (buildings, for example, do
+                // not), and both steps below need one. Look it up once and skip everything else,
+                // instead of four component lookups for every entity on every tick.
+                // ReferenceEquals keeps the null semantics of the original "?." lookups.
+                MovementAnimator anim = entityComponent.GetComponent<MovementAnimator>();
+                if (ReferenceEquals(anim, null)) continue;
                 var pathFollower = entityComponent.GetComponent<Walker>()?.PathFollower;
-                var animatedPathFollower = entityComponent.GetComponent<MovementAnimator>()?._animatedPathFollower;
+                var animatedPathFollower = anim._animatedPathFollower;
                 if (pathFollower != null && animatedPathFollower != null)
                 {
                     // Update the animated path follower to the path follower's
@@ -1015,7 +1032,6 @@ namespace BeaverBuddies
                 // Make sure it updates the model's position as well
                 try
                 {
-                    MovementAnimator anim = entityComponent.GetComponent<MovementAnimator>();
                     CharacterRotator rotator = entityComponent.GetComponent<CharacterRotator>();
                     // The CharacterRotator seems to sometimes not be initialized when this is caused, and
                     // therefore something is null, likely _animatedPathFollower.

@@ -99,6 +99,7 @@ TimingChecks.Run(assembly, Test);
 DemolitionChecks.Run(assembly, Test);
 InputRecoveryChecks.Run(assembly, Test);
 ReplayEventChecks.Run(assembly, Test);
+TraceChecks.Run(assembly, Test);
 Console.WriteLine($"{total-failures}/{total} passed");
 return failures == 0 ? 0 : 1;
 

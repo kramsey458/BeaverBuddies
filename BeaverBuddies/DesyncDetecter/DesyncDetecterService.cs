@@ -1,5 +1,6 @@
 ﻿using BeaverBuddies.Events;
 using BeaverBuddies.Reporting;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +13,16 @@ namespace BeaverBuddies.DesyncDetecter
     public struct Trace
     {
         public string message;
-        public string stackTrace;
+
+        // Not part of the wire format: VerifyTraces compares messages only, so sending the stack
+        // (many times the size of the message) would only cost bandwidth and CPU on both players.
+        // A trace that arrived from another player therefore has no stack.
+        [JsonIgnore] public StackTrace stack;
+        [JsonIgnore] public bool stackSkipped;
+
+        // Formatted on demand: this is the expensive part, and it is only needed for a desync report.
+        [JsonIgnore]
+        public string StackText => stack != null ? stack.ToString() : stackSkipped ? "[Skipped stack trace]" : null;
     }
 
     [Serializable]
@@ -123,11 +133,13 @@ namespace BeaverBuddies.DesyncDetecter
             }
             // Trace called before the service has been initialized
             if (traces.Count == 0) return;
-            string stackTrace = skipStackTrack ? "[Skipped stack trace]" : new StackTrace().ToString();
+            // Capturing the stack is much cheaper than formatting it, and most traces are never
+            // looked at, so it is only turned into text if a desync report needs it.
             CurrentTrace.Add(new Trace()
             {
                 message = message,
-                stackTrace = stackTrace,
+                stack = skipStackTrack ? null : new StackTrace(),
+                stackSkipped = skipStackTrack,
             });
         }
 
@@ -218,7 +230,7 @@ namespace BeaverBuddies.DesyncDetecter
             sb.AppendLine("---------- My Trace ----------");
             PrintTracesAt(sb, myTraces, errorIndex);
 
-            sb.AppendLine("---------- Other Trace ----------");
+            sb.AppendLine("---------- Other Trace (messages only: stack traces are not sent between players) ----------");
             PrintTracesAt(sb, otherTraces, errorIndex);
 
             sb.AppendLine("========== Desynced Log End ==========");
@@ -269,7 +281,7 @@ namespace BeaverBuddies.DesyncDetecter
 
         private static void LogTrace(StringBuilder sb, Trace trace, bool withStack = false)
         {
-            string stack = withStack ? trace.stackTrace.ToString() : null;
+            string stack = withStack ? trace.StackText : null;
             LogTrace(sb, trace.message, stack);
         }
 

@@ -5,6 +5,32 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
+## Unreleased
+
+### Performance
+
+- A guest's actions are sent to the host as soon as they are made, instead of at the next tick
+  boundary. The host still decides which tick they run on (a guest never plays or hashes its own
+  actions), so this only removes about half a tick of input delay, roughly 0.3 s at normal speed,
+  and cannot change what any player simulates.
+- The per-tick desync traces no longer carry stack traces over the network. A trace records its
+  stack as an object and formats it only when a desync report is written, so detailed logging
+  costs much less CPU and the trace payload is far smaller. Desync reports still include your own
+  stacks; the other player's traces appear as messages only.
+- Each tick, only characters that move are examined for animation state. Buildings are skipped
+  after one component lookup instead of four.
+- The per-frame animation update reads the simulation clock and the tick length as plain values
+  instead of calling into Unity several times for every animated character, and looks up each
+  character's tick bucket once instead of twice. The result is computed with the same arithmetic.
+- The "Client trying to tick before receiving Heartbeat" warning is logged once per tick instead
+  of on every check.
+
+### Validation
+
+- Release Steam and non-Steam builds succeed with no warnings. 87 StabilityTests, 59 RuntimeChecks
+  (four new ones cover the trace payload and the desync report) and 2 Python checks pass.
+- The network and animation changes have not been observed in a running game.
+
 ## 1.0.0
 
 The first official release of this fork. See `STEAM-INVITES.md`, `CONNECTION-PANEL.md` and `PLAYER-ACTIVITY.md`.
