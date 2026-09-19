@@ -142,7 +142,11 @@ namespace BeaverBuddies.Events
                 // If this is happening to a non-entity (e.g. prefab),
                 // just let the base method handle it
                 if (entityID == null) return null;
-                return doRecord(entityID);
+                var message = doRecord(entityID);
+                // Advisory "Editing" notice for other players; presentation only.
+                if (message != null && component.HasComponent<Building>())
+                    BeaverBuddies.Activity.PlayerActivityService.NotifyLocalEdit(entityID);
+                return message;
             });
         }
     }

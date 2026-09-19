@@ -237,13 +237,17 @@ namespace BeaverBuddies.Events
 
         public override void Replay(IReplayContext context)
         {
-            var entityService = context.GetSingleton<EntityService>();
-            var blockObjects = blocks.Select(guid =>
+            // The selection was made against the sender's state a few ticks ago,
+            // so some entities may already be gone here (e.g. builders finished
+            // demolishing an object the same area selection also covered).
+            // Skip those instead of failing the whole session; both sides
+            // replay at the same tick, so they skip the same entities.
+            var blockObjects = ResolveBlockObjects(context, blocks);
+            if (blocks.Count > 0 && blockObjects.Count == 0)
             {
-                return context.GetSingleton<EntityRegistry>()
-                .GetEntity(guid)
-                .GetComponent<BlockObject>();
-            }).ToList();
+                Plugin.LogWarning($"Skipping {ToActionString()}: none of the {blocks.Count} entities exist anymore");
+                return;
+            }
             if (markForDemolition)
             {
                 context.GetSingleton<DemolishableSelectionTool>().ActionCallback(blockObjects, start, end, false, false);
@@ -252,6 +256,19 @@ namespace BeaverBuddies.Events
             {
                 context.GetSingleton<DemolishableUnselectionTool>().ActionCallback(blockObjects, start, end, false, false);
             }
+        }
+
+        internal static List<BlockObject> ResolveBlockObjects(IReplayContext context, IEnumerable<Guid> ids)
+        {
+            var result = new List<BlockObject>();
+            foreach (Guid id in ids)
+            {
+                // Logs a warning if the entity or component is missing.
+                var blockObject = GetComponent<BlockObject>(context, id.ToString());
+                if (blockObject == null) continue;
+                result.Add(blockObject);
+            }
+            return result;
         }
 
         public override string ToActionString()

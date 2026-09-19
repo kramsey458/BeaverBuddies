@@ -1,13 +1,25 @@
 # BeaverBuddies
 
-## Stability fork — Preview 8
+## Stability fork — 1.1.1 (Preview 17)
 
-This fork contains the cumulative stability changes through **1.1.0-stability.8**,
+This fork contains the cumulative stability changes through **1.1.1**,
 based on [thomaswp/BeaverBuddies](https://github.com/thomaswp/BeaverBuddies)'s
 `v1.1` branch at `a13b1f20dacb6e30efa967cc8ac83e73779c0755`.
 It was built against Timberborn **1.1.2.4**. The fork owner has confirmed that
 Preview 4 resolved the reported multiplayer badtide desync in their playtest.
 This is not a guarantee against every possible desync or mod interaction.
+
+Release 1.1.1 (Preview 17) is built directly on Preview 8. Previews 9 through 16 are deprecated
+and are not part of this line, so none of their changes are included.
+
+1.1.1 adds player activity indicators: other players' colored, translucent
+cursors, remote selection outlines, and Viewing/Editing labels on buildings, plus an
+in-game **Player cursors** dialog to set each player's cursor color, size and
+transparency locally. See [PLAYER-ACTIVITY.md](PLAYER-ACTIVITY.md). It also fixes a
+multiplayer crash where replaying an area selection that included entities already
+demolished ended the session. The fork owner reported that this release works very
+well in multiplayer playtesting. The crash fix is covered by a regression check but
+has not been confirmed in a live session.
 
 Preview 8 adds input-state recovery after desync and multiplayer scene loading,
 including direct-IP rehosting. This targets stuck controls and requires a live
@@ -37,8 +49,8 @@ to the upstream project, not this fork's preview builds.
 
 ### Tests
 
-The Preview 8 validation run passed **83 checks**: 28 transport/replay/animation
-checks, 53 compiled mod/game checks, and two Python snapshot-comparison checks.
+The 1.1.1 validation run passed **107 checks**: 50 transport/replay/animation/activity
+checks, 55 compiled mod/game checks, and two Python snapshot-comparison checks.
 The optional live Harmony-installation fixture is not included in that count;
 see the changelog for its test-runtime limitation.
 See [StabilityTests/README.md](StabilityTests/README.md) for commands and required
