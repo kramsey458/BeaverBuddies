@@ -41,6 +41,20 @@ namespace TimberNet
             QueueError(message);
         }
 
+        private ActivityChannel? activityChannel;
+
+        protected override void OnMapFrameReceived(ISocketStream stream)
+        {
+            activityChannel = CreateActivityChannel(stream);
+        }
+
+        public override void SendActivity(PlayerActivity activity)
+        {
+            if (IsStopped) return;
+            // The host replaces the id with the one it assigned to this connection.
+            activityChannel?.Post(activity);
+        }
+
         protected override void ProcessReceivedEvent(JObject message)
         {
             base.ProcessReceivedEvent(message);
@@ -79,6 +93,7 @@ namespace TimberNet
         public override void Close()
         {
             base.Close();
+            activityChannel?.Close();
             client.Close();
         }
     }

@@ -74,6 +74,36 @@ namespace TimberNet
             isStopped = true;
         }
 
+        // ---- Player activity (presentation only) ----
+        // Activity frames never touch receivedEventQueue, the replay script or Hash.
+
+        private readonly ActivityMailbox activityMailbox = new ActivityMailbox();
+
+        /// <summary>Takes the newest state of each remote player; call from the game thread.</summary>
+        public PlayerActivity[] TakeActivity() => activityMailbox.Take(ActivityMailbox.Now);
+
+        public void ClearActivity() => activityMailbox.Clear();
+
+        /// <summary>Shares this player's activity. The sender's id is ignored: the host assigns identity.</summary>
+        public virtual void SendActivity(PlayerActivity activity) { }
+
+        // The map is always the first frame a client reads, so nothing else may be written
+        // to the host before this point.
+        protected virtual void OnMapFrameReceived(ISocketStream stream) { }
+
+        protected virtual void HandleActivity(ISocketStream source, PlayerActivity activity)
+        {
+            activityMailbox.Put(activity, ActivityMailbox.Now);
+        }
+
+        protected ActivityChannel CreateActivityChannel(ISocketStream stream) =>
+            new ActivityChannel(stream, WriteActivityFrame, HandleConnectionFailure);
+
+        private void WriteActivityFrame(ISocketStream stream, JObject message)
+        {
+            SendDataWithLength(stream, MessageToBuffer(message));
+        }
+
         public TimberNetBase()
         {
             Log("Started");
@@ -289,6 +319,7 @@ namespace TimberNet
                     }
 
                     ReceiveFile(client, messageLength);
+                    OnMapFrameReceived(client);
                     messageCount++;
                     continue;
                 }
@@ -305,6 +336,13 @@ namespace TimberNet
 
                 string message = BufferToStringMessage(buffer);
                 var control = JObject.Parse(message);
+                if ((string?)control[TYPE_KEY] == PlayerActivity.MessageType)
+                {
+                    // Optional display data: a malformed frame is dropped, never fatal to the session.
+                    if (PlayerActivity.TryParse(control, out PlayerActivity? activity) && activity != null)
+                        HandleActivity(client, activity);
+                    continue;
+                }
                 if ((string?)control[TYPE_KEY] == "SessionFault")
                 {
                     sessionFaults.Enqueue("A peer could not replay a multiplayer action. Reload a known-good save before rehosting.");

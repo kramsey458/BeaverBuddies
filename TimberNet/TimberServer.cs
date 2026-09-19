@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using Newtonsoft.Json.Linq;
 using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
 
 namespace TimberNet
 { 
@@ -19,6 +20,13 @@ namespace TimberNet
         private readonly List<ISocketStream> clients = new List<ISocketStream>();
         private readonly ConcurrentDictionary<ISocketStream, ConcurrentQueue<JObject>> queuedMessages =
             new ConcurrentDictionary<ISocketStream, ConcurrentQueue<JObject>>();
+
+        // Player activity is presentation-only and deliberately kept out of queuedMessages' lock,
+        // so a slow gameplay send can never stall a guest's receive thread.
+        private readonly ConcurrentDictionary<ISocketStream, int> playerIds = new ConcurrentDictionary<ISocketStream, int>();
+        private readonly ConcurrentDictionary<ISocketStream, ActivityChannel> activityChannels =
+            new ConcurrentDictionary<ISocketStream, ActivityChannel>();
+        private int lastPlayerId;
 
         private readonly ISocketListener listener;
 
@@ -126,6 +134,39 @@ namespace TimberNet
                 if (IsStopped) { client.Close(); throw new IOException("Session closed while joining."); }
                 queuedMessages.TryAdd(client, new ConcurrentQueue<JObject>());
                 clients.Add(client);
+                // The host is player 0; the host, not the guest, chooses each guest's id.
+                playerIds[client] = Interlocked.Increment(ref lastPlayerId);
+            }
+        }
+
+        private void RemoveActivity(ISocketStream client)
+        {
+            playerIds.TryRemove(client, out _);
+            if (activityChannels.TryRemove(client, out ActivityChannel? channel)) channel.Close();
+        }
+
+        protected override void HandleActivity(ISocketStream source, PlayerActivity activity)
+        {
+            // Frames from a connection that has not been admitted are ignored.
+            if (!playerIds.TryGetValue(source, out int id)) return;
+            PlayerActivity assigned = activity.WithPlayerId(id);
+            base.HandleActivity(source, assigned);
+            RelayActivity(assigned, source);
+        }
+
+        public override void SendActivity(PlayerActivity activity)
+        {
+            if (IsStopped) return;
+            RelayActivity(activity.WithPlayerId(0), null);
+        }
+
+        private void RelayActivity(PlayerActivity activity, ISocketStream? except)
+        {
+            foreach (var pair in activityChannels)
+            {
+                if (ReferenceEquals(pair.Key, except)) continue;
+                if (!pair.Key.Connected) { RemoveActivity(pair.Key); continue; }
+                pair.Value.Post(activity);
             }
         }
 
@@ -143,6 +184,9 @@ namespace TimberNet
                         SendEvent(client, message);
                     }
                     queuedMessages.TryRemove(client, out _);
+                    // The map, state and init event are already written, so this client can
+                    // now receive activity frames.
+                    if (!IsStopped) activityChannels[client] = CreateActivityChannel(client);
                 }
                 else
                 {
@@ -208,6 +252,7 @@ namespace TimberNet
                     if (!clients[i].Connected)
                     {
                         queuedMessages.TryRemove(clients[i], out _);
+                        RemoveActivity(clients[i]);
                         clients.RemoveAt(i);
                     }
                 }
@@ -253,6 +298,7 @@ namespace TimberNet
         public override void Close()
         {
             base.Close();
+            foreach (var pair in activityChannels) pair.Value.Close();
             try
             {
                 lock (queuedMessages) clients.ForEach(client => client.Close());

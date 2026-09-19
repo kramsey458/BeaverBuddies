@@ -69,6 +69,12 @@ namespace BeaverBuddies
                 .SetLocalizedTooltip("BeaverBuddies.Settings.PauseReduction.Tooltip")
         );
 
+        // ---- Player Activity ----
+
+        public ModSetting<bool> PlayerActivity { get; } =
+            new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.PlayerActivity")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.PlayerActivity.Tooltip"));
+
         // ---- Developer Settings ----
 
         public ModSetting<bool> AlwaysTrace { get; } =
@@ -123,6 +129,7 @@ namespace BeaverBuddies
         public static bool EnableSteam => instance?.EnableSteamConnection.Value ?? true;
         public static bool LobbyJoinable => instance?.FriendsCanJoinSteamGame.Value ?? true;
         public static bool ShouldShowFirstTimerMessage => instance?.ShowFirstTimerMessage.Value ?? true;
+        public static bool PlayerActivityEnabled => instance?.PlayerActivity.Value ?? true;
 
         public static PauseReductionLevel PauseReductionSetting
         {
