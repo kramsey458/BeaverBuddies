@@ -5,9 +5,9 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
-## 1.1.3
+## 1.0.0
 
-The current release. See `STEAM-INVITES.md`, `CONNECTION-PANEL.md` and `PLAYER-ACTIVITY.md`.
+The first official release of this fork. See `STEAM-INVITES.md`, `CONNECTION-PANEL.md` and `PLAYER-ACTIVITY.md`.
 
 ### Steam friend invites
 
@@ -172,15 +172,21 @@ The current release. See `STEAM-INVITES.md`, `CONNECTION-PANEL.md` and `PLAYER-A
 - Add transport, animation and player-activity regression tests and a compiled-mod
   runtime test executable.
 
+### Other
+
+- Disable the original project's in-game changelog dialog, which appeared whenever the mod
+  version changed.
+- Report the mod version as exactly the release version, without a source-commit suffix.
+
 ## Installation
 
 1. Fully close Timberborn on every computer.
-2. Download `BeaverBuddies-stability-1.1.3.zip` from the
+2. Download `BeaverBuddies-stability-1.0.0.zip` from the
    [latest release](https://github.com/kramsey458/BeaverBuddies-Multiplayer-Stability-Fork/releases/latest),
    extract it, and copy the `BeaverBuddies-StabilityPreview` folder into
    `Documents/Timberborn/Mods`, replacing any earlier copy.
 3. Make sure **Harmony** and **Mod Settings** are enabled, then enable **BeaverBuddies -
-   Stability Preview**, version **1.1.3**, on every computer. Disable the Workshop
+   Stability Preview**, version **1.0.0**, on every computer. Disable the Workshop
    BeaverBuddies and any duplicate local copies: they share one mod ID.
 4. Every player must use the same build. Test on a copied save first.
 
@@ -196,7 +202,7 @@ comparison commands.
 
 ## Validation and limits
 
-The 1.1.3 validation run passed **144 checks**: 87 in `StabilityTests` (network transport,
+The 1.0.0 validation run passed **144 checks**: 87 in `StabilityTests` (network transport,
 the Steam transport against a simulated Steam network, direct-versus-Steam protocol parity,
 animation, player activity, ping measurement and the connection panel), 55 in
 `RuntimeChecks` (the compiled mod running against the game's own assemblies) and two Python
