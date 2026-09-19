@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="$(SourceRoot)/TimberNet/TimberNet.csproj" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/ReplayExecution.cs" Link="ReplayExecution.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/CatchUpSpeed.cs" Link="CatchUpSpeed.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamLinkTypes.cs" Link="SteamLinkTypes.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamLinkSocket.cs" Link="SteamLinkSocket.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamLinkManager.cs" Link="SteamLinkManager.cs" />
