@@ -22,10 +22,13 @@ namespace BeaverBuddies.Events
         public string serverGameVersion;
         //public string mapName;
         public bool isDebugMode;
+        // The host's choice for the session. Absent from an older host, which reads as the game's default.
+        public bool removeLargeColonySpeedLimit;
 
         public override void Replay(IReplayContext context)
         {
             //context.GetSingleton<ReplayService>().SetServerMapName(mapName);
+            LargeColonySpeedLimit.AdoptHostChoice(removeLargeColonySpeedLimit);
             string warningMessage = null;
             if (serverGameVersion != GameVersions.CurrentVersion.ToString())
             {
@@ -56,6 +59,7 @@ namespace BeaverBuddies.Events
                 serverModVersion = Plugin.Version,
                 serverGameVersion = GameVersions.CurrentVersion.ToString(),
                 isDebugMode = Settings.Debug,
+                removeLargeColonySpeedLimit = LargeColonySpeedLimit.BeginHostSession(),
                 //mapName = mapName,
             };
             return message;

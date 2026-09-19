@@ -5,6 +5,63 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
+## 1.0.4 (pre-release)
+
+A pre-release for testing. Every player should install this build: the game warns when mod
+versions differ, and mixed versions are untested.
+
+### Game speed
+
+- New setting, **Remove the large colony speed limit** (off by default). Timberborn slows its
+  own speed settings as the population grows (`GameSpeedThrottler`): above speed 1 it runs at
+  `1 + (speed - 1) x factor`, and the factor falls with population. In a colony of about 350,
+  speed 7 ran at 3.4 (5.7 ticks a second where speed 7 asks for 11.7) and speed 3 at 1.8,
+  while the simulation was using about a third of the time a true speed 7 allows on the
+  computer it was measured on. With the setting on, the chosen speed is the speed.
+- In multiplayer **the host's choice applies to everyone** for the whole session. Every
+  computer applies that scaling by itself, so if the host removed it and a guest did not, the
+  host would run twice as fast, and because the guest's catch-up speed is scaled down too it
+  could never recover. The choice travels in the message a guest receives when it joins; a
+  guest's own setting is ignored during a session, and a host changing the setting mid-session
+  changes nothing until the next one. In single player the setting applies at once.
+- This only changes how fast ticks are worked through, never what happens in them, so it
+  cannot change what anyone simulates.
+
+### The host eases off for a guest that cannot keep up
+
+- A guest that falls behind speeds itself up (1.0.2). That recovers from hitches, but a
+  computer that cannot sustain the chosen speed at all falls further behind every second
+  however hard it tries. Removing the speed limit makes that more likely, so the host now
+  notices and slows a little, only when it has to.
+- Guests report the tick their game has reached in the reply they already send to the host's
+  ping probe, about once a second, so the host knows how far behind each guest is.
+- Nothing happens while the slowest guest is within 15 ticks, or is further behind but closing
+  the gap. If it is more than 15 behind and has not gained for four reports in a row, the host
+  drops to 85% of the chosen speed; while already easing, two reports are enough for the next
+  15% step, down to a floor of 30%. Four reports for the first step, because lag also grows
+  for as long as a single stall lasts (a save, a long garbage collection, the window in the
+  background) and a fast computer recovers from that by itself. Once every guest is within 4
+  ticks the host climbs back 5% per report, so a guest that was only slow for a while gets
+  full speed back. Speed 1 and a paused game are never eased.
+- In the test model of a guest whose computer manages 8 ticks a second at speed 7 (which asks
+  for 11.7), the host settles at 7.9 and the guest is never more than 31 ticks behind; without
+  easing it is 660 behind after three minutes and still falling. A guest that manages 10 gets
+  10.1, one that manages 5 gets 4.8. A fast guest with hitches, or with a single stall of up
+  to 4 seconds, never slows the host.
+- The connection panel shows the host **Slowest guest behind**, and **Easing off for guests**
+  with the percentage while it applies. Each change is also written to `Player.log`.
+- Like the catch-up rule, this changes how fast the host works through ticks, not which tick
+  anything happens on.
+
+### Validation
+
+- Release Steam and non-Steam builds succeed with no warnings. 132 StabilityTests (sixteen new
+  in `HostPacingChecks`: who decides the speed limit, the reply format and its limits, the
+  easing rule step by step, the model above, a real host and guest session in which the host
+  reads the guest's lag from its replies, and the panel), 64 RuntimeChecks against the built
+  mod and 2 Python checks pass.
+- Not yet played in a multiplayer session.
+
 ## 1.0.3
 
 Every player should install this build: it exchanges a little extra information when someone

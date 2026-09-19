@@ -504,6 +504,28 @@ namespace BeaverBuddies
             UpdateSpeed();
         }
 
+        private readonly HostPacing hostPacing = new HostPacing();
+        private readonly System.Diagnostics.Stopwatch hostPacingClock = System.Diagnostics.Stopwatch.StartNew();
+        private long nextHostPacingSampleMs;
+
+        /// <summary>How much of the chosen speed the host is running at, in percent. 100 unless it is easing off for a guest.</summary>
+        public int HostPacingPercent => hostPacing.Percent;
+
+        // Guests report their tick about once a second, so sampling more often would count the same report twice.
+        private void SampleHostPacing(ServerEventIO host)
+        {
+            long now = hostPacingClock.ElapsedMilliseconds;
+            if (now < nextHostPacingSampleMs) return;
+            nextHostPacingSampleMs = now + TimberNet.TimberServer.StatusIntervalMs;
+            int before = hostPacing.Percent;
+            hostPacing.Sample(host.NetBase?.WorstGuestTicksBehind, TargetSpeed > 0);
+            if (hostPacing.Percent != before)
+            {
+                Plugin.Log($"Host pacing: now {hostPacing.Percent}% of the chosen speed " +
+                           $"(slowest guest is {host.NetBase?.WorstGuestTicksBehind} ticks behind)");
+            }
+        }
+
         private void UpdateSpeed()
         {
             if (EventIO.IsNull) return;
@@ -521,6 +543,13 @@ namespace BeaverBuddies
 
             // If we're not out of ticks to process, speed up while we're behind.
             float targetSpeed = CatchUpSpeed.For(TargetSpeed, io.TicksBehind, _speedManager.CurrentSpeed);
+
+            // The host is never behind. It eases off instead, and only when a guest cannot keep up.
+            if (io is ServerEventIO host)
+            {
+                SampleHostPacing(host);
+                targetSpeed = hostPacing.Apply(targetSpeed);
+            }
 
             if (_speedManager.CurrentSpeed != targetSpeed)
             {

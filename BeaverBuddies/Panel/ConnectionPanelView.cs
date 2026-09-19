@@ -91,6 +91,8 @@ namespace BeaverBuddies.Panel
             facts.Add(Fact("BeaverBuddies.Panel.LabelTickRate", model.TickRateText));
             facts.Add(Fact("BeaverBuddies.Panel.LabelSpeed", model.SpeedText));
             if (model.BehindText != null) facts.Add(Fact("BeaverBuddies.Panel.LabelBehind", model.BehindText));
+            if (model.GuestsBehindText != null) facts.Add(Fact("BeaverBuddies.Panel.LabelGuestsBehind", model.GuestsBehindText));
+            if (model.PacingText != null) facts.Add(Fact("BeaverBuddies.Panel.LabelPacing", model.PacingText));
             if (model.LinkText != null) facts.Add(Fact("BeaverBuddies.Panel.LabelLink", model.LinkText));
         }
 

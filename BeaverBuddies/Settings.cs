@@ -90,6 +90,12 @@ namespace BeaverBuddies
             new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.PlayerActivity")
                 .SetLocalizedTooltip("BeaverBuddies.Settings.PlayerActivity.Tooltip"));
 
+        // ---- Game speed ----
+
+        public ModSetting<bool> RemoveLargeColonySpeedLimit { get; } =
+            new(false, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.RemoveSpeedLimit")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.RemoveSpeedLimit.Tooltip"));
+
         // ---- Connection Panel ----
 
         public LimitedStringModSetting ConnectionPanelDisplay { get; } =
@@ -166,6 +172,7 @@ namespace BeaverBuddies
         public static bool LobbyJoinable => instance?.FriendsCanJoinSteamGame.Value ?? true;
         public static bool ShouldShowFirstTimerMessage => instance?.ShowFirstTimerMessage.Value ?? true;
         public static bool PlayerActivityEnabled => instance?.PlayerActivity.Value ?? true;
+        public static bool RemoveSpeedLimit => instance?.RemoveLargeColonySpeedLimit.Value ?? false;
 
         public static PanelDisplayMode ConnectionPanelDisplayMode =>
             ParseChoice(instance?.ConnectionPanelDisplay?.Value, PanelDisplayMode.Expanded);
@@ -205,6 +212,8 @@ namespace BeaverBuddies
             base(settings, modSettingsOwnerRegistry, modRepository)
         {
             instance = this;
+            // Outside a session the change applies at once. In a session the host's choice at the start stands.
+            RemoveLargeColonySpeedLimit.ValueChanged += (_, _) => LargeColonySpeedLimit.Reapply();
         }
 
         protected override string ModId => Plugin.ID;

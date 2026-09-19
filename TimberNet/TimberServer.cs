@@ -31,6 +31,8 @@ namespace TimberNet
         // How often the host pings each guest and publishes the roster. Adjustable so tests need not wait.
         public static int StatusIntervalMs = 1000;
         private readonly ConcurrentDictionary<ISocketStream, RttTracker> trackers = new ConcurrentDictionary<ISocketStream, RttTracker>();
+        // How many ticks behind the host each guest was at its last reply. Written on network threads.
+        private readonly ConcurrentDictionary<ISocketStream, int> guestTicksBehind = new ConcurrentDictionary<ISocketStream, int>();
         private double nextStatusAtMs;
 
         private readonly ISocketListener listener;
@@ -149,14 +151,36 @@ namespace TimberNet
         {
             playerIds.TryRemove(client, out _);
             trackers.TryRemove(client, out _);
+            guestTicksBehind.TryRemove(client, out _);
             if (activityChannels.TryRemove(client, out ActivityChannel? channel)) channel.Close();
         }
 
         protected override void HandleStatusFrame(ISocketStream source, string type, JObject message)
         {
             // Only a guest's reply to our probe means anything to the host.
-            if (type != StatusFrames.ReplyType || !StatusFrames.TryParseSequence(message, out int sequence)) return;
-            if (trackers.TryGetValue(source, out RttTracker? tracker)) tracker.OnReply(sequence, RttTracker.NowMs);
+            if (type != StatusFrames.ReplyType || !StatusFrames.TryParseReply(message, out int sequence, out int? tick)) return;
+            if (!trackers.TryGetValue(source, out RttTracker? tracker)) return;
+            tracker.OnReply(sequence, RttTracker.NowMs);
+            // The reply left the guest about half a round trip ago, which is a fraction of a tick.
+            if (tick != null) guestTicksBehind[source] = Math.Max(0, TickCount - tick.Value);
+        }
+
+        /// <summary>
+        /// The largest number of ticks any connected guest was behind the host at its last reply, or null if no
+        /// guest has reported one. Used to ease the host's speed when a guest cannot keep up.
+        /// </summary>
+        public int? WorstGuestTicksBehind
+        {
+            get
+            {
+                int? worst = null;
+                foreach (var pair in guestTicksBehind)
+                {
+                    if (!pair.Key.Connected) continue;
+                    if (worst == null || pair.Value > worst.Value) worst = pair.Value;
+                }
+                return worst;
+            }
         }
 
         protected override void OnUpdate()
@@ -184,7 +208,8 @@ namespace TimberNet
             {
                 ISocketStream stream = pair.Key;
                 if (!stream.Connected || !playerIds.TryGetValue(stream, out int id) || !trackers.TryGetValue(stream, out RttTracker? tracker)) continue;
-                peers.Add(tracker.Snapshot(id, (stream as ITransportInfo)?.TransportName ?? "", now));
+                PeerStatus peer = tracker.Snapshot(id, (stream as ITransportInfo)?.TransportName ?? "", now);
+                peers.Add(guestTicksBehind.TryGetValue(stream, out int behind) ? peer.WithTicksBehind(behind) : peer);
             }
             peers.Sort((a, b) => a.PlayerId.CompareTo(b.PlayerId));
             return peers;

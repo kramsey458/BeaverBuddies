@@ -24,11 +24,20 @@ namespace TimberNet
         public double JitterMs { get; }
         /// <summary>Seconds since the host last heard a reply from them; null before the first probe.</summary>
         public double? SilenceSeconds { get; }
+        /// <summary>
+        /// How many ticks behind the host this guest was at its last reply. Host-side only: it is not part of the
+        /// roster guests receive. Null until the guest has reported a tick (or if it runs an older build).
+        /// </summary>
+        public int? TicksBehind { get; }
 
-        public PeerStatus(int playerId, string transport, double? rttMs, double jitterMs, double? silenceSeconds)
+        public PeerStatus(int playerId, string transport, double? rttMs, double jitterMs, double? silenceSeconds, int? ticksBehind = null)
         {
             PlayerId = playerId; Transport = transport ?? ""; RttMs = rttMs; JitterMs = jitterMs; SilenceSeconds = silenceSeconds;
+            TicksBehind = ticksBehind;
         }
+
+        public PeerStatus WithTicksBehind(int? ticksBehind) =>
+            new PeerStatus(PlayerId, Transport, RttMs, JitterMs, SilenceSeconds, ticksBehind);
     }
 
     /// <summary>A snapshot of the multiplayer connection. Presentation only; never part of the simulation.</summary>
@@ -130,6 +139,30 @@ namespace TimberNet
 
         public static JObject Probe(int sequence) => new JObject { ["type"] = ProbeType, ["seq"] = sequence };
         public static JObject Reply(int sequence) => new JObject { ["type"] = ReplyType, ["seq"] = sequence };
+
+        /// <summary>A guest's reply that also says which tick its game has reached, so the host can see its lag.</summary>
+        public static JObject Reply(int sequence, int tick) =>
+            new JObject { ["type"] = ReplyType, ["seq"] = sequence, ["tick"] = Math.Max(0, tick) };
+
+        /// <summary>Parses a reply. The tick is optional, so a reply from a build that does not send one still counts.</summary>
+        public static bool TryParseReply(JObject message, out int sequence, out int? tick)
+        {
+            sequence = 0; tick = null;
+            try
+            {
+                if (message.Count > 3 || message["seq"]?.Type != JTokenType.Integer) return false;
+                sequence = (int)message["seq"]!;
+                if (sequence < 0) return false;
+                JToken? reported = message["tick"];
+                if (reported == null) return message.Count <= 2;
+                if (reported.Type != JTokenType.Integer) return false;
+                int value = (int)reported;
+                if (value < 0) return false;
+                tick = value;
+                return true;
+            }
+            catch (Exception e) when (e is OverflowException || e is InvalidCastException) { return false; }
+        }
 
         public static bool TryParseSequence(JObject message, out int sequence)
         {

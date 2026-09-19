@@ -56,6 +56,8 @@ namespace BeaverBuddies.Panel
         public double? RttMs;
         public double? SilenceSeconds;
         public string Transport = "";
+        /// <summary>Host only: how many ticks behind the host this guest last reported being. Null if unknown.</summary>
+        public int? TicksBehind;
     }
 
     /// <summary>Everything the panel needs, gathered by the game and free of any game types.</summary>
@@ -66,6 +68,8 @@ namespace BeaverBuddies.Panel
         public double? HostSilenceSeconds;
         public double? TickRate;
         public float Speed;
+        /// <summary>Host only: percent of the chosen speed the host is running at. Below 100 while easing off for a guest.</summary>
+        public int HostPacingPercent = 100;
         public List<PanelPlayer> Players = new List<PanelPlayer>();
     }
 
@@ -87,6 +91,10 @@ namespace BeaverBuddies.Panel
         public string BehindText;
         /// <summary>How the players are connected ("Direct", "Steam"), or null when unknown.</summary>
         public string LinkText;
+        /// <summary>Only for the host: how far the slowest guest is behind. Null for a guest or when unknown.</summary>
+        public string GuestsBehindText;
+        /// <summary>Only for the host while it is easing off so a guest can keep up. Null otherwise.</summary>
+        public string PacingText;
     }
 
     public static class PanelModelBuilder
@@ -148,6 +156,17 @@ namespace BeaverBuddies.Panel
             if (!input.IsHost)
                 model.BehindText = t(input.TicksBehind == 1 ? "BeaverBuddies.Panel.TicksOne" : "BeaverBuddies.Panel.TicksMany",
                     new object[] { input.TicksBehind });
+
+            if (input.IsHost)
+            {
+                int? worst = input.Players.Where(p => !p.IsYou && !p.IsHost && p.TicksBehind != null)
+                    .Select(p => p.TicksBehind).DefaultIfEmpty(null).Max();
+                if (worst != null)
+                    model.GuestsBehindText = t(worst == 1 ? "BeaverBuddies.Panel.TicksOne" : "BeaverBuddies.Panel.TicksMany",
+                        new object[] { worst.Value });
+                if (input.HostPacingPercent < 100)
+                    model.PacingText = t("BeaverBuddies.Panel.PacingValue", new object[] { input.HostPacingPercent });
+            }
 
             // The host lists how each guest reaches it; a guest shows only how it reaches the host.
             var linked = input.IsHost ? input.Players.Where(p => !p.IsYou && !p.IsHost) : input.Players.Where(p => p.IsYou);
