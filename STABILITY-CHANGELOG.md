@@ -5,10 +5,9 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
-## 1.0.1 (pre-release)
+## 1.0.1
 
-A pre-release for testing. Every player must install this build; it will not join a session with
-1.0.0.
+Every player must install this build; it will not join a session with 1.0.0.
 
 ### Performance
 
@@ -32,7 +31,7 @@ A pre-release for testing. Every player must install this build; it will not joi
 
 - Release Steam and non-Steam builds succeed with no warnings. 87 StabilityTests, 59 RuntimeChecks
   (four new ones cover the trace payload and the desync report) and 2 Python checks pass.
-- The network and animation changes have not been observed in a running game.
+- The fork owner played this build and reported that it works great.
 
 ## 1.0.0
 
@@ -210,12 +209,12 @@ The first official release of this fork. See `STEAM-INVITES.md`, `CONNECTION-PAN
 ## Installation
 
 1. Fully close Timberborn on every computer.
-2. Download `BeaverBuddies-stability-1.0.0.zip` from the
+2. Download `BeaverBuddies-stability-1.0.1.zip` from the
    [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest),
    extract it, and copy the `BeaverBuddies-StabilityPreview` folder into
    `Documents/Timberborn/Mods`, replacing any earlier copy.
 3. Make sure **Harmony** and **Mod Settings** are enabled, then enable **BeaverBuddies -
-   Stability Fork**, version **1.0.0**, on every computer. Disable the Workshop
+   Stability Fork**, version **1.0.1**, on every computer. Disable the Workshop
    BeaverBuddies and any duplicate local copies: they share one mod ID.
 4. Every player must use the same build. Test on a copied save first.
 
@@ -231,9 +230,9 @@ comparison commands.
 
 ## Validation and limits
 
-The 1.0.0 validation run passed **144 checks**: 87 in `StabilityTests` (network transport,
+The 1.0.1 validation run passed **148 checks**: 87 in `StabilityTests` (network transport,
 the Steam transport against a simulated Steam network, direct-versus-Steam protocol parity,
-animation, player activity, ping measurement and the connection panel), 55 in
+animation, player activity, ping measurement and the connection panel), 59 in
 `RuntimeChecks` (the compiled mod running against the game's own assemblies) and two Python
 archive-comparison checks. The mod builds against Timberborn 1.1.2.4 with no warnings.
 Tests require .NET 8; game-dependent checks additionally require the user's installed game
@@ -249,7 +248,7 @@ client is not covered by the automated checks; it has been confirmed in real pla
 
 The fork owner's two-player playtests confirmed: the animation crash fix, the badtide
 desync fix, the player activity indicators, Steam invites and the connection panel, and
-that the compatibility check, failed-action stop and performance changes play well. They
+that the compatibility check, failed-action stop, input-delay and performance changes play well. They
 confirm the reported issues and that this build plays well, not universal determinism.
 
 Not confirmed in a live session: the demolition-selection crash fix, equal-distance
