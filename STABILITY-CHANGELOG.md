@@ -186,7 +186,7 @@ The first official release of this fork. See `STEAM-INVITES.md`, `CONNECTION-PAN
    extract it, and copy the `BeaverBuddies-StabilityPreview` folder into
    `Documents/Timberborn/Mods`, replacing any earlier copy.
 3. Make sure **Harmony** and **Mod Settings** are enabled, then enable **BeaverBuddies -
-   Stability Preview**, version **1.0.0**, on every computer. Disable the Workshop
+   Stability Fork**, version **1.0.0**, on every computer. Disable the Workshop
    BeaverBuddies and any duplicate local copies: they share one mod ID.
 4. Every player must use the same build. Test on a copied save first.
 
