@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Troubleshooting: BeaverBuddies Stability Fork</title>
+  <meta name="description" content="Fixes for BeaverBuddies Stability Fork problems: the mod not loading, refused joins, Steam invites, direct IP, desyncs, lag, and how to collect logs.">
+  <meta name="theme-color" content="#b9530f">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#b9530f"/><path d="M14 46V18h15c6 0 9.5 3 9.5 7.6 0 3-1.7 5.3-4.4 6.4 3.6 1 5.7 3.6 5.7 7.2 0 5-3.9 7.8-10 7.8H14z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><circle cx="49.5" cy="41" r="4.5" fill="#fff"/></svg>
+      <span>BeaverBuddies<small>Stability Fork</small></span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="index.html">Features</a>
+      <a href="install.html">Install</a>
+      <a href="troubleshooting.html" aria-current="page">Troubleshooting</a>
+      <a href="faq.html">FAQ</a>
+      <a class="nav-cta" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="page-hero">
+  <div class="container">
+    <h1>Troubleshooting</h1>
+    <p>Find your symptom, try the fixes in order, and if it is still broken, collect the logs and ask for help.</p>
+  </div>
+</div>
+
+<div class="container doc">
+  <nav class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul>
+      <li><a href="#first">Check these first</a></li>
+      <li><a href="#setup">Installing and loading</a></li>
+      <li><a href="#joining">Joining a game</a></li>
+      <li><a href="#playing">While playing</a></li>
+      <li><a href="#features">Panel, cursors and settings</a></li>
+      <li><a href="#logs">Collecting logs</a></li>
+      <li><a href="#help">Getting help</a></li>
+    </ul>
+  </nav>
+
+  <div class="prose">
+
+    <section id="first">
+      <h2>Check these first</h2>
+      <p>Most multiplayer problems come from a mismatch between the players. Before anything else, check that everyone has:</p>
+      <ul>
+        <li>the <b>exact same download</b> of the mod (the mod list shows the version, and it must be the same zip, not just the same number),</li>
+        <li>the <b>same version of Timberborn</b>,</li>
+        <li>the <b>same other mods</b> enabled, at the same versions,</li>
+        <li>and has <b>fully restarted the game</b> since installing or updating.</li>
+      </ul>
+    </section>
+
+    <section id="setup">
+      <h2>Installing and loading</h2>
+
+      <details class="q" id="not-loading">
+        <summary>The mod does not load, or does not show in the mod list</summary>
+        <div class="answer">
+          <p class="sub">Try this</p>
+          <ol>
+            <li>Check the folder. You should have <code>Documents\Timberborn\Mods\BeaverBuddies-StabilityPreview\version-1.1\manifest.json</code>. A common mistake is an extra nested folder after extracting the zip.</li>
+            <li>Make sure <b>Harmony</b> and <b>Mod Settings</b> are installed and enabled. The mod needs both.</li>
+            <li>Enable <b>BeaverBuddies - Stability Fork</b> in the mod manager and restart the game.</li>
+            <li>The mod is built for Timberborn 1.1 (tested on 1.1.2.4). Older game versions will not run it.</li>
+            <li>Open <code>%USERPROFILE%\AppData\LocalLow\Mechanistry\Timberborn\Player.log</code> and search for <code>BeaverBuddies v1.0.1 is loaded!</code>. If it is there, the mod loaded and the problem is elsewhere.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="q" id="duplicates">
+        <summary>There are two BeaverBuddies in the mod list, or things behave strangely</summary>
+        <div class="answer">
+          <p class="sub">Why</p>
+          <p>This mod and the Workshop BeaverBuddies share the same mod ID, and so does any second copy in your <code>Mods</code> folder. They conflict.</p>
+          <p class="sub">Try this</p>
+          <p>Keep exactly one BeaverBuddies. Unsubscribe from the Workshop version, delete any extra copy from <code>Documents\Timberborn\Mods</code>, then restart the game.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="joining">
+      <h2>Joining a game</h2>
+
+      <details class="q" id="mismatch">
+        <summary>Joining is refused with a version or build message</summary>
+        <div class="answer">
+          <p class="sub">Why</p>
+          <p>When someone joins, the mod compares the game version, the mod version and the mod's own files, before the save is sent. It refuses any difference, because two different builds cannot stay in sync. A copy someone compiled themselves can be refused even when the version number matches, and an old version still running in memory is detected too.</p>
+          <p class="sub">Try this</p>
+          <ol>
+            <li>Have everyone download the <b>same zip</b> from the <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">latest release</a>.</li>
+            <li>Replace the <code>BeaverBuddies-StabilityPreview</code> folder, then <b>fully restart</b> Timberborn on every computer.</li>
+            <li>Check that the game versions match.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="q" id="steam-invite">
+        <summary>Invite Friends does nothing, or my friend gets no invite</summary>
+        <div class="answer">
+          <p class="sub">Try this</p>
+          <ol>
+            <li>Right after hosting starts, the Steam lobby is still being created. Wait a moment and click <b>Invite Friends</b> again. The Steam overlay should open.</li>
+            <li>On the host, make sure <b>Enable Steam Networking</b> is on in Mod Settings (it is by default).</li>
+            <li>Both players need to be online in Steam. The friend must be on your Steam friends list and own Timberborn on Steam.</li>
+            <li>Both of you need the <a href="#mismatch">same build</a> of the mod and the same game version.</li>
+            <li>If Steam still will not connect, host with a <a href="install.html#host">direct IP or Hamachi</a> instead. Steam problems never stop direct IP hosting.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="q" id="already-started">
+        <summary>The invite says the host has already started</summary>
+        <div class="answer">
+          <p class="sub">Why</p>
+          <p>Nobody can join once the host chooses <b>Start Game</b>. An old invite now explains that instead of hanging.</p>
+          <p class="sub">Try this</p>
+          <p>The host saves and hosts again, then sends a fresh invite. Have your friend join before the host starts.</p>
+        </div>
+      </details>
+
+      <details class="q" id="steam-connect">
+        <summary>Joining over Steam takes forever or fails with a Steam message</summary>
+        <div class="answer">
+          <p class="sub">Why</p>
+          <p>Steam connects players directly when it can find a route and relays through its own network otherwise. Failures end with an explanation that includes Steam's own reason, for example <em>"The connection timed out. Steam could not find a working route between you."</em> The same detail is written to <code>Player.log</code>.</p>
+          <p class="sub">Try this</p>
+          <ol>
+            <li>Read the message. It says what Steam reported.</li>
+            <li>Make sure you are both on the <a href="#mismatch">exact same build</a>. If joining sits on a loading message and never finishes, that is the first thing to rule out.</li>
+            <li>Try again. If it repeats, use <a href="install.html#host">direct IP or Hamachi</a>.</li>
+            <li>If it keeps failing, <a href="#logs">collect both players' logs</a> and ask for help.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="q" id="direct-ip">
+        <summary>Direct IP will not connect</summary>
+        <div class="answer">
+          <p class="sub">Try this</p>
+          <ol>
+            <li>The host must already be hosting and must not have chosen <b>Start Game</b>.</li>
+            <li>Use the right address: your public IP for the internet, or the virtual-network address (for example from Hamachi) if you use one.</li>
+            <li>The default port is <b>25565</b>. Your router must forward it to the host's computer, and your firewall must allow Timberborn.</li>
+            <li>Port forwarding is the hard part. A virtual LAN such as Hamachi avoids it and has been tested. So does a <a href="install.html#host">Steam invite</a>.</li>
+          </ol>
+        </div>
+      </details>
+    </section>
+
+    <section id="playing">
+      <h2>While playing</h2>
+
+      <details class="q" id="panel-status">
+        <summary>The connection panel shows something other than "In sync"</summary>
+        <div class="answer">
+          <div class="table-wrap" style="margin-top:.4rem">
+            <table>
+              <thead><tr><th>Status</th><th>What it means and what to do</th></tr></thead>
+              <tbody>
+                <tr><td><b>Catching up</b></td><td>Guests only. Your game is three or more ticks behind the host. Brief spells are normal. If it keeps growing, your connection or computer cannot keep up, so check your ping and try a lower game speed.</td></tr>
+                <tr><td><b>Waiting for host</b></td><td>Guests only. Your game has used everything the host sent and is waiting for more. A flash is normal. If it stays, check the connection.</td></tr>
+                <tr><td><b>Connection unstable</b></td><td>Someone has stopped responding for five seconds. Check their connection. If it does not recover, the session may end.</td></tr>
+                <tr><td><b>Out of sync</b></td><td>A desync was detected. See <a href="#desync">the next item</a>.</td></tr>
+                <tr><td><b>Disconnected</b></td><td>The session has ended. Rejoin, or have the host rehost.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Ping colors: green is 80 ms or less, yellow up to 160 ms, red anything higher or no response.</p>
+        </div>
+      </details>
+
+      <details class="q" id="desync">
+        <summary>A desync: "A connected player desynced and cannot continue playing"</summary>
+        <div class="answer">
+          <p class="sub">Why</p>
+          <p>The players' games have drifted apart. Every copy of the game must make exactly the same decisions, and something made one of them differ. This fork removes many known causes, but it cannot promise none.</p>
+          <p class="sub">Try this</p>
+          <ol>
+            <li>The host chooses <b>Save and Rehost</b>.</li>
+            <li>Steam guests accept a fresh invite; direct IP guests reconnect.</li>
+            <li>You may need to restart the game if problems persist.</li>
+          </ol>
+          <p class="sub">Things that cause it</p>
+          <ul>
+            <li><b>Different mods, or different mod versions.</b> The mod only compares itself, not your other mods. This is a classic cause.</li>
+            <li><b>Different settings that affect the simulation</b>, for example <b>Reduce the number of forced pauses</b>. Keep them identical.</li>
+          </ul>
+          <p>Keep backups of your saves. If it keeps happening, <a href="#logs">collect both players' logs</a>.</p>
+        </div>
+      </details>
+
+      <details class="q" id="stopped">
+        <summary>"Multiplayer has stopped because this action may have changed only part of the game state"</summary>
+        <div class="answer">
+          <p class="sub">Why</p>
+          <p>A multiplayer action could not be completed on one player's game. Carrying on could leave two games different without anyone noticing, so the mod stops the session.</p>
+          <p class="sub">Try this</p>
+          <ol>
+            <li>Return to the main menu and <b>reload a known-good save</b> before hosting again.</li>
+            <li><b>Do not overwrite your good save</b> with the session that stopped.</li>
+            <li>If it repeats with the same action, <a href="#logs">collect the logs</a> and say what you were doing.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="q" id="lag">
+        <summary>The game is laggy or my FPS is low in multiplayer</summary>
+        <div class="answer">
+          <p class="sub">Try this</p>
+          <ol>
+            <li>Turn off <b>Always Use Detailed Logging</b> in Mod Settings, on <b>both</b> computers. It records a lot of extra detail for diagnosing desyncs and noticeably slows the game. It is off by default.</li>
+            <li>Look at the connection panel. A red ping or a high <b>Behind host</b> value means the connection is the problem, not the game.</li>
+            <li>Try a lower game speed if a slower computer keeps falling behind.</li>
+            <li>Make sure both players run the latest release, which does less work every tick and every frame.</li>
+          </ol>
+        </div>
+      </details>
+    </section>
+
+    <section id="features">
+      <h2>Panel, cursors and settings</h2>
+
+      <details class="q" id="panel-missing">
+        <summary>The connection panel is missing</summary>
+        <div class="answer">
+          <p class="sub">Try this</p>
+          <ul>
+            <li>The panel only appears <b>in multiplayer games</b>.</li>
+            <li>Check <b>Mod Settings, BeaverBuddies, Connection panel</b>. It may be set to <b>Hidden</b>.</li>
+            <li>If you bound the <b>Toggle connection panel</b> key, you may have hidden it with that key.</li>
+            <li>It may be <b>collapsed</b> to a single line (a colored dot, the player count and one ping). Click the line to expand it.</li>
+            <li>It may be in a different corner. See <b>Connection panel position</b>.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="q" id="activity">
+        <summary>I cannot see other players' cursors, labels or pings</summary>
+        <div class="answer">
+          <p class="sub">Try this</p>
+          <ul>
+            <li><b>Player activity indicators</b> must be on in Mod Settings. A player who turns sharing off disappears from your view until they turn it back on.</li>
+            <li>A cursor is hidden while it is over the game's interface, outside the game window, or off the map. Yours is hidden while the game window is not focused.</li>
+            <li>Open <b>Options, Player cursors</b> and check that you have not made that player's cursor tiny (size 50% is the minimum) or nearly invisible (transparency goes up to 90%). <b>Reset</b> restores the defaults.</li>
+            <li>For pings, bind a key for <b>Ping Location</b> in the game's keybinding settings.</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <section id="logs">
+      <h2>Collecting logs</h2>
+      <p>If you ask for help, logs from <b>both</b> players are what make a problem diagnosable. Steam failures and desyncs record their details there.</p>
+      <ol>
+        <li>Close the game so the log is complete.</li>
+        <li>Open <code>%USERPROFILE%\AppData\LocalLow\Mechanistry\Timberborn</code> in Explorer (paste it into the address bar).</li>
+        <li>Copy <code>Player.log</code>. If the problem happened in an earlier session, also copy <code>Player-prev.log</code>, the log of the session before.</li>
+        <li>If a desync happened with detailed logging on, the water diagnostics are saved in the <code>BeaverBuddiesDiagnostics</code> folder next to the logs. They are written only on your computer and are never uploaded.</li>
+      </ol>
+      <div class="callout">
+        <strong class="label">Before you share</strong>
+        <p>Logs contain file paths, which include your Windows user name. Look through the file before you post it if that matters to you.</p>
+      </div>
+      <p>The <b>Post Bug Report</b> button in the desync dialog does not upload anything in this fork's builds, because they contain no upload token. Send the files by hand instead.</p>
+      <p>Leave <b>Always Use Detailed Logging</b> off unless you are asked to turn it on. It costs performance.</p>
+    </section>
+
+    <section id="help">
+      <h2>Getting help</h2>
+      <p>Open an issue on the <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/issues">project's GitHub page</a> and include:</p>
+      <ul>
+        <li>what you were doing and what you expected,</li>
+        <li>the mod version, the game version, and whether you connected over Steam or direct IP,</li>
+        <li>both players' <code>Player.log</code> files.</li>
+      </ul>
+      <p>Also check the <a href="faq.html">FAQ</a>, which answers the common questions.</p>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <h2>BeaverBuddies Stability Fork</h2>
+        <p>Multiplayer co-op for Timberborn, with Steam friend invites, a connection panel and stability fixes. Free and open source under the GPL-3.0.</p>
+      </div>
+      <div>
+        <h2>Guides</h2>
+        <ul>
+          <li><a href="install.html">Install guide</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Project</h2>
+        <ul>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork">Source code</a></li>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases">All releases</a></li>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/blob/main/STABILITY-CHANGELOG.md">Changelog</a></li>
+          <li><a href="https://github.com/thomaswp/BeaverBuddies">The original BeaverBuddies</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="fineprint">An independent fork of BeaverBuddies by thomaswp and contributors, whose multiplayer design this builds on. Timberborn is made by Mechanistry; this is an unofficial community mod and is not affiliated with or endorsed by them.</p>
+  </div>
+</footer>
+<script>
+  // Open the question a link points at, so #anchors from other pages land on an expanded answer.
+  function openFromHash(scroll) {
+    var target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target && target.tagName === 'DETAILS') {
+      target.open = true;
+      if (scroll) target.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }
+  }
+  addEventListener('hashchange', function () { openFromHash(true); });
+  addEventListener('load', function () { openFromHash(true); });
+  openFromHash(false);
+</script>
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FAQ: BeaverBuddies Stability Fork</title>
+  <meta name="description" content="Answers about BeaverBuddies Stability Fork: what it is, how it differs from the original, who can play, compatibility with other mods, privacy, and known limits.">
+  <meta name="theme-color" content="#b9530f">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#b9530f"/><path d="M14 46V18h15c6 0 9.5 3 9.5 7.6 0 3-1.7 5.3-4.4 6.4 3.6 1 5.7 3.6 5.7 7.2 0 5-3.9 7.8-10 7.8H14z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><circle cx="49.5" cy="41" r="4.5" fill="#fff"/></svg>
+      <span>BeaverBuddies<small>Stability Fork</small></span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="index.html">Features</a>
+      <a href="install.html">Install</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+      <a href="faq.html" aria-current="page">FAQ</a>
+      <a class="nav-cta" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="page-hero">
+  <div class="container">
+    <h1>Frequently asked questions</h1>
+    <p>Quick answers about what the mod is, who can play, and what it can and cannot do.</p>
+  </div>
+</div>
+
+<div class="container doc">
+  <nav class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul>
+      <li><a href="#general">About the mod</a></li>
+      <li><a href="#playing">Playing together</a></li>
+      <li><a href="#compat">Compatibility</a></li>
+      <li><a href="#privacy">Privacy and safety</a></li>
+      <li><a href="#technical">How it works</a></li>
+      <li><a href="#project">The project</a></li>
+    </ul>
+  </nav>
+
+  <div class="prose">
+
+    <section id="general">
+      <h2>About the mod</h2>
+
+      <details class="q">
+        <summary>What is BeaverBuddies Stability Fork?</summary>
+        <div class="answer">
+          <p>It is a multiplayer co-op mod for Timberborn: you and your friends build one colony together, in real time, each with your own camera and interface. It is an independent fork of the original <a href="https://github.com/thomaswp/BeaverBuddies">BeaverBuddies</a> by thomaswp and contributors, and keeps everything the original does.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>How is it different from the original BeaverBuddies?</summary>
+        <div class="answer">
+          <ul>
+            <li><b>Steam friend invites</b> on Valve's current networking API, with no port forwarding.</li>
+            <li>An in-game <b>connection panel</b> with players, ping, sync status and tick rate.</li>
+            <li><b>Player activity</b>: teammates' cursors, selection outlines and Viewing / Editing labels, with per-player cursor styling.</li>
+            <li><b>Fixes</b> for a water desync that depended on frame rate, an animation crash, random-number, saving and demolition problems, and more.</li>
+            <li><b>Clearer failures</b>: a mismatched build is refused before the save is sent, and failed connections and actions end with a plain-language reason.</li>
+          </ul>
+          <p>The <a href="index.html#stability">home page</a> and the <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/blob/main/STABILITY-CHANGELOG.md">changelog</a> have the details, including how well each fix is confirmed.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Is it free?</summary>
+        <div class="answer">
+          <p>Yes. It is free and open source under the GNU General Public License v3.0, and the original authorship and license are preserved.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Where do I download it? Is it on the Steam Workshop?</summary>
+        <div class="answer">
+          <p>This fork is distributed through <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases">GitHub Releases</a> only. It is not on the Steam Workshop or mod.io; the pages you may find there belong to the original project.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Which version of Timberborn does it need?</summary>
+        <div class="answer">
+          <p>It is built and tested against Timberborn <b>1.1.2.4</b>. Every player must run the same game version, because the mod compares it when someone joins.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Which platforms are supported?</summary>
+        <div class="answer">
+          <p>It has been tested on <b>Windows with the Steam version</b> of Timberborn. Steam invites need the Steam version. Other stores, macOS and Linux have not been tested by this fork.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="playing">
+      <h2>Playing together</h2>
+
+      <details class="q">
+        <summary>How many players can play?</summary>
+        <div class="answer">
+          <p>It has been tested with <b>two players</b>. Larger groups have not been tried by this fork, so treat them as untested.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Does everyone need to own Timberborn and install the mod?</summary>
+        <div class="answer">
+          <p>Yes. Every player needs their own copy of the game and the same mod download. Only the host needs the save: guests receive a copy of it when they join, stored under <b>Online Games</b>.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Do I need to forward ports or use Hamachi?</summary>
+        <div class="answer">
+          <p>Not with a <b>Steam invite</b>. For a direct IP connection, the default port is 25565 and your router must forward it. A virtual LAN such as Hamachi also works and avoids port forwarding.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Can someone join after the game has started?</summary>
+        <div class="answer">
+          <p>No. Nobody can join once the host chooses <b>Start Game</b>. Everyone starts from the same save, and a running game cannot be handed to a newcomer. Save, host again, and invite them.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Do we share a screen?</summary>
+        <div class="answer">
+          <p>No. It is one shared colony, but every player has their own camera and interface. You see teammates' cursors and selections, and you can ping the map.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>What happens if the game desyncs?</summary>
+        <div class="answer">
+          <p>The game tells you. The host chooses <b>Save and Rehost</b>, and guests reconnect (Steam guests accept a fresh invite). This fork removes many known causes of desyncs, but it cannot promise none, so keep backups of your saves. See <a href="troubleshooting.html#desync">Troubleshooting</a>.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="compat">
+      <h2>Compatibility</h2>
+
+      <details class="q">
+        <summary>Can I play with someone using the original BeaverBuddies?</summary>
+        <div class="answer">
+          <p>No. Every player must run the exact same build, so a mixed session is refused. The original and this fork also share a mod ID, so you cannot have both installed at once.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Can I use other mods?</summary>
+        <div class="answer">
+          <p>The mod only checks the game and BeaverBuddies itself. It does <b>not</b> compare your other mods or settings. Every player should have the same mods at the same versions, and simulation-affecting settings (for example <b>Reduce the number of forced pauses</b>) should match. A mismatched third-party mod is a classic cause of desyncs.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Do I need Harmony and Mod Settings?</summary>
+        <div class="answer">
+          <p>Yes, both. Get them from the <a href="install.html#requirements">install guide</a>.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Why do we all have to use exactly the same download?</summary>
+        <div class="answer">
+          <p>The game must play out identically on every computer, and even a rebuilt copy of the same version can differ. So when someone joins, the mod compares the game version, its own version and its own files, and refuses any difference before the save is sent.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Why is the install folder called "BeaverBuddies-StabilityPreview"?</summary>
+        <div class="answer">
+          <p>It keeps its original name on purpose. An update then replaces the old copy instead of sitting beside it, and two folders with the same mod ID would conflict.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="privacy">
+      <h2>Privacy and safety</h2>
+
+      <details class="q">
+        <summary>Does a Steam connection reveal my IP address?</summary>
+        <div class="answer">
+          <p>Connections go directly between players when Steam can find a route and are otherwise relayed through Steam's network. Valve documents that relaying keeps players' IP addresses hidden from each other. With a <b>direct IP</b> connection, the host's address is shared with the players you give it to.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Can a stranger join my game?</summary>
+        <div class="answer">
+          <p>Not over Steam. The host opens a friends-only lobby and only accepts players who joined it, so someone who knows your Steam ID cannot connect. Over direct IP, anyone with your address and port can try to connect until you start the game, so share it only with people you trust.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>What does the mod send about me?</summary>
+        <div class="answer">
+          <p>Other players in your session receive your game actions and, if <b>Player activity indicators</b> is on, your cursor position, selection, recent building edits and the display name and color you chose. This fork's builds contain no bug-report upload token, so the <b>Post Bug Report</b> button does not upload anything, and diagnostic files are written only to your own computer.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="technical">
+      <h2>How it works</h2>
+
+      <details class="q">
+        <summary>How does it keep everyone in sync?</summary>
+        <div class="answer">
+          <p>Everyone starts from the same save. Every action is sent to the host, which decides the tick it happens on and sends it to everyone. Because the game is deterministic, the same save and the same actions on the same ticks play out identically on every computer. The <a href="index.html#how-it-works">home page</a> explains it in a minute, and the <a href="https://github.com/thomaswp/BeaverBuddies/wiki/How-does-it-work%3F">original project's wiki</a> goes deeper.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>What is the "tick rate" in the connection panel?</summary>
+        <div class="answer">
+          <p>How many simulation ticks per second the game is running right now, averaged over about three seconds. It is around 1.7 at normal speed, rises with game speed, and drops to 0 when paused.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Does the mod slow the game down?</summary>
+        <div class="answer">
+          <p>Normal play has little overhead, and the latest release does less work every tick and every frame. The one big exception is <b>Always Use Detailed Logging</b>, which records a lot of extra detail for diagnosing desyncs. Leave it off unless you are hunting a desync.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Is there a delay when I do something as a guest?</summary>
+        <div class="answer">
+          <p>A little. A guest's action goes to the host, which schedules it on a tick and sends it back, so it appears a short moment after you click. The latest release removes about half a tick of that delay (roughly 0.3 seconds at normal speed) by sending your actions immediately.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="project">
+      <h2>The project</h2>
+
+      <details class="q">
+        <summary>How do I update?</summary>
+        <div class="answer">
+          <p>Download the new zip, close the game, and replace the <code>BeaverBuddies-StabilityPreview</code> folder. Everyone updates together, because different builds will not join each other.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>How do I report a bug?</summary>
+        <div class="answer">
+          <p>Open an issue on the <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/issues">project's GitHub page</a> and attach both players' <code>Player.log</code>. <a href="troubleshooting.html#logs">Collecting logs</a> explains where to find them.</p>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>What are the known limits?</summary>
+        <div class="answer">
+          <ul>
+            <li>Everyone must run the exact same build, and other mods and settings are not compared.</li>
+            <li>Nobody can join after <b>Start Game</b>.</li>
+            <li>Desyncs can still happen.</li>
+            <li>Tested with two players on Windows and Steam only.</li>
+            <li>Text added by this fork is English only. Other languages show the English text for those strings.</li>
+            <li>One fix, for a demolition selection that includes already-demolished buildings, has automated tests but has not been confirmed in a live session.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="q">
+        <summary>Who made it?</summary>
+        <div class="answer">
+          <p>The multiplayer design and most of the code come from the original <a href="https://github.com/thomaswp/BeaverBuddies">BeaverBuddies</a> by thomaswp and contributors. This fork is maintained by <a href="https://github.com/kramsey458">kramsey458</a>. It is an unofficial community mod and is not affiliated with Timberborn's developer, Mechanistry.</p>
+        </div>
+      </details>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <h2>BeaverBuddies Stability Fork</h2>
+        <p>Multiplayer co-op for Timberborn, with Steam friend invites, a connection panel and stability fixes. Free and open source under the GPL-3.0.</p>
+      </div>
+      <div>
+        <h2>Guides</h2>
+        <ul>
+          <li><a href="install.html">Install guide</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Project</h2>
+        <ul>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork">Source code</a></li>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases">All releases</a></li>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/blob/main/STABILITY-CHANGELOG.md">Changelog</a></li>
+          <li><a href="https://github.com/thomaswp/BeaverBuddies">The original BeaverBuddies</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="fineprint">An independent fork of BeaverBuddies by thomaswp and contributors, whose multiplayer design this builds on. Timberborn is made by Mechanistry; this is an unofficial community mod and is not affiliated with or endorsed by them.</p>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BeaverBuddies Stability Fork: Timberborn co-op with Steam invites</title>
+  <meta name="description" content="Play Timberborn together. Steam friend invites, a live connection panel, teammate cursors, and fixes for multiplayer crashes and desyncs. Free and open source.">
+  <meta name="theme-color" content="#b9530f">
+  <meta property="og:title" content="BeaverBuddies Stability Fork">
+  <meta property="og:description" content="Timberborn co-op with Steam friend invites, a live connection panel, teammate cursors, and fewer crashes and desyncs.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#b9530f"/><path d="M14 46V18h15c6 0 9.5 3 9.5 7.6 0 3-1.7 5.3-4.4 6.4 3.6 1 5.7 3.6 5.7 7.2 0 5-3.9 7.8-10 7.8H14z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><circle cx="49.5" cy="41" r="4.5" fill="#fff"/></svg>
+      <span>BeaverBuddies<small>Stability Fork</small></span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="index.html" aria-current="page">Features</a>
+      <a href="install.html">Install</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+      <a href="faq.html">FAQ</a>
+      <a class="nav-cta" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============ hero ============ -->
+<div class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="eyebrow">Timberborn co-op mod &middot; v1.0.1</div>
+      <h1>Build your colony together.</h1>
+      <p class="lede">BeaverBuddies Stability Fork lets you and your friends run one Timberborn colony at the same time, with Steam friend invites, a live connection panel, and fixes for the crashes and desyncs that make multiplayer painful.</p>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+          Download 1.0.1
+        </a>
+        <a class="btn btn-secondary" href="install.html">Read the install guide</a>
+      </div>
+      <p class="hero-note">Free and open source. Tested on Windows with the Steam version of Timberborn 1.1.2.4.</p>
+    </div>
+
+    <div class="panel-demo" role="img" aria-label="Illustration of the in-game connection panel: three players, one with a red ping of 190 milliseconds, status In sync, 1.7 ticks per second, connection Steam.">
+      <div class="panel-window" aria-hidden="true">
+        <div class="panel-row panel-title"><span class="dot"></span><span>Multiplayer</span><span class="spacer">Host</span></div>
+        <div class="panel-row panel-status"><span class="dot"></span><span>In sync</span></div>
+        <div class="panel-sep"></div>
+        <div class="panel-row"><span class="dot"></span><span>Alex</span><span class="value">You / Host</span></div>
+        <div class="panel-row"><span class="dot"></span><span>Sam</span><span class="value">42 ms</span></div>
+        <div class="panel-row"><span class="dot red"></span><span>Riley</span><span class="value">190 ms</span></div>
+        <div class="panel-sep"></div>
+        <dl class="panel-meta"><dt>Tick rate</dt><dd>1.7 ticks/s</dd><dt>Speed</dt><dd>1x</dd><dt>Connection</dt><dd>Steam</dd></dl>
+      </div>
+      <p class="demo-caption">Illustration of the connection panel, not a screenshot.</p>
+    </div>
+  </div>
+</div>
+
+<div class="facts">
+  <div class="container">
+    <ul>
+      <li><b>1.0.1</b><span>Latest release</span></li>
+      <li><b>Timberborn 1.1.2.4</b><span>Built and tested against</span></li>
+      <li><b>Windows + Steam</b><span>Tested platform</span></li>
+      <li><b>Two players</b><span>Tested group size</span></li>
+      <li><b>GPL-3.0</b><span>Open source license</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ three steps ============ -->
+<section id="how-to-play">
+  <div class="container">
+    <div class="section-head">
+      <h2>Playing together takes three steps</h2>
+      <p>No router settings, no virtual networks. If you both have Timberborn on Steam, you are a few clicks away.</p>
+    </div>
+    <ol class="steps horizontal">
+      <li>
+        <h3>Everyone installs the mod</h3>
+        <p>Same download, same version, then restart the game. <a href="install.html">Install guide</a></p>
+      </li>
+      <li>
+        <h3>The host invites a friend</h3>
+        <p>Load a save, choose <b>Host co-op game</b>, then <b>Invite Friends</b> and pick your friend in Steam's overlay.</p>
+      </li>
+      <li>
+        <h3>Your friend joins, you start</h3>
+        <p>When your friend appears in the player list, the host chooses <b>Start Game</b>. Everyone builds in the same colony.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ feature cards ============ -->
+<section class="tint" id="features">
+  <div class="container">
+    <div class="section-head">
+      <h2>What you get</h2>
+      <p>Everything the original BeaverBuddies does, plus the parts that make a long co-op session actually work.</p>
+    </div>
+    <div class="grid grid-3">
+      <article class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
+        <h3>Steam friend invites</h3>
+        <p>Invite a friend from Steam's own overlay. Connections go straight between you when Steam finds a route and are relayed through Steam otherwise, so there is no Hamachi and no port forwarding. Direct IP still works too.</p>
+      </article>
+      <article class="card">
+        <div class="icon water"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+        <h3>A connection panel</h3>
+        <p>See who is connected, each player's ping, whether you are in sync, and the tick rate at a glance. Collapse it to one line or hide it completely.</p>
+      </article>
+      <article class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3l7 17 2.5-7.5L21 10z"/></svg></div>
+        <h3>See your teammates</h3>
+        <p>Colored, translucent cursors with names, selection outlines, and Viewing / Editing labels on buildings. Restyle each player's cursor in the Player cursors dialog.</p>
+      </article>
+      <article class="card">
+        <div class="icon water"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Fewer crashes and desyncs</h3>
+        <p>Fixes for the water, animation, random-number, saving, demolition and input problems that knocked sessions out of sync or crashed them.</p>
+      </article>
+      <article class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg></div>
+        <h3>Problems are explained</h3>
+        <p>Joining with a different build is refused before the save is sent. Failed connections and multiplayer actions end with a plain-language reason instead of a silent hang.</p>
+      </article>
+      <article class="card">
+        <div class="icon water"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
+        <h3>Quicker and lighter</h3>
+        <p>A guest's actions reach the host about half a tick sooner (roughly 0.3 seconds at normal speed), and the mod does less work every tick and every frame.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ steam ============ -->
+<section id="steam">
+  <div class="container grid grid-2" style="align-items:start;gap:2.5rem">
+    <div>
+      <div class="eyebrow">Steam invites</div>
+      <h2>Skip the port forwarding</h2>
+      <p class="lede" style="max-width:none">Choose <b>Invite Friends</b> and your friend gets a normal Steam invitation. If their game is closed, Steam launches it and joins for them.</p>
+      <p><span class="chip ok">Confirmed</span> &nbsp;Working in real playtests between the maintainer and a friend.</p>
+    </div>
+    <div>
+      <ul>
+        <li><b>Friends only.</b> The host opens a friends-only lobby and only accepts players who joined it. A stranger who knows your Steam ID cannot connect.</li>
+        <li><b>Your address stays private.</b> Valve documents that relayed connections keep players' IP addresses hidden from each other.</li>
+        <li><b>Direct IP still works.</b> Both options are offered when you host, so Hamachi and port forwarding keep working. Steam problems can never stop you hosting over direct IP.</li>
+        <li><b>Clear errors.</b> If a connection fails, you get Steam's own reason in plain language and in the log.</li>
+        <li><b>The current API.</b> The original used Valve's older networking API, which Valve marks as deprecated. This fork uses the one Valve recommends.</li>
+      </ul>
+      <p style="color:var(--muted);font-size:.95rem">Both players need to be online in Steam and to own Timberborn on Steam.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ panel ============ -->
+<section class="tint" id="panel">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Connection panel</div>
+      <h2>Know how your session is doing</h2>
+      <p>A small panel in a corner of your screen during multiplayer games. It only reads: it sends no gameplay events, and if it ever fails it switches itself off.</p>
+    </div>
+    <div class="grid grid-2" style="align-items:start">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Status</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr><td><b>In sync</b></td><td>Normal. Everything is running together.</td></tr>
+            <tr><td><b>Catching up</b></td><td>Guests only: your game is a few ticks behind the host.</td></tr>
+            <tr><td><b>Waiting for host</b></td><td>Guests only: nothing has arrived from the host for a moment.</td></tr>
+            <tr><td><b>Connection unstable</b></td><td>Someone has stopped responding for five seconds.</td></tr>
+            <tr><td><b>Out of sync</b></td><td>A desync was detected.</td></tr>
+            <tr><td><b>Disconnected</b></td><td>The session has ended.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <ul>
+          <li><b>Ping</b> is the round trip to the host. <span style="color:var(--good)"><b>Green</b></span> is 80 ms or less, <span style="color:var(--warn)"><b>yellow</b></span> up to 160 ms, <span style="color:var(--bad)"><b>red</b></span> anything higher or no response.</li>
+          <li><b>Tick rate</b> and <b>speed</b> show how fast the simulation is really running, and guests see how many ticks they are <b>behind the host</b> (0 or 1 is normal).</li>
+          <li><b>Connection</b> shows whether players are connected directly or through Steam.</li>
+          <li><b>Click the title</b> to collapse it to a single line. Your choice is remembered.</li>
+          <li>Hide it or move it to any corner in <b>Mod Settings</b>, or bind the optional <b>Toggle connection panel</b> key.</li>
+        </ul>
+        <p style="color:var(--muted);font-size:.95rem">Ping is measured by the mod's network layer, so it means the same thing over Steam, Hamachi and direct IP.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ teammates ============ -->
+<section id="teammates">
+  <div class="container grid grid-2" style="align-items:start;gap:2.5rem">
+    <div>
+      <div class="eyebrow">Player activity</div>
+      <h2>See what your teammates are doing</h2>
+      <p class="lede" style="max-width:none">Other players' cursors, selections and building edits show up on your screen, so you stop building on top of each other.</p>
+      <ul>
+        <li><b>Cursors</b> are colored and translucent, with a name label. They are shared in world space, so cameras can be anywhere.</li>
+        <li><b>Selection outlines</b> use the game's own outline in that player's color.</li>
+        <li><b>Viewing / Editing</b> labels appear on buildings. It is an advisory notice, not a lock: both players can still change a building.</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="margin-top:0">Make each cursor your own</h3>
+      <p>Open <b>Options</b> (Esc) and choose <b>Player cursors</b>. Each connected player gets a card:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Control</th><th>Range</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td>Color</td><td>Their color, 10 presets, or exact RGB</td><td>Their color</td></tr>
+            <tr><td>Size</td><td>50% to 300%</td><td>100%</td></tr>
+            <tr><td>Transparency</td><td>0% to 90%</td><td>50%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--muted);font-size:.95rem">These are display-only choices that stay on your machine. They are never sent to other players, are remembered by player name, and cannot affect the simulation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ stability ============ -->
+<section class="tint" id="stability">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Under the hood</div>
+      <h2>Stability work, and how sure we are of it</h2>
+      <p>Each fix is marked by how well it is confirmed. <b>Confirmed</b> means it was verified in a real multiplayer playtest; <b>Tested</b> means automated regression checks cover it but it has not been confirmed in a live session.</p>
+    </div>
+    <div class="grid grid-2">
+      <article class="card">
+        <h3 style="margin-top:0">Water no longer depends on frame rate <span class="chip ok">Confirmed</span></h3>
+        <p>Players at different frame rates used to see different water, which caused desyncs. The water now follows the simulation's own clock. It resolved a reported "badtide" desync.</p>
+      </article>
+      <article class="card">
+        <h3 style="margin-top:0">Animation crash fixed <span class="chip ok">Confirmed</span></h3>
+        <p>A path cursor that could move backward between ticks, and non-finite visual coordinates, no longer crash the game.</p>
+      </article>
+      <article class="card">
+        <h3 style="margin-top:0">Builds are checked before the save is sent <span class="chip tested">Tested</span></h3>
+        <p>The original only warned about a version mismatch after the save had loaded. The fork compares the game version and the exact mod build first, with a time limit and a clear message.</p>
+      </article>
+      <article class="card">
+        <h3 style="margin-top:0">A failed action stops safely <span class="chip tested">Tested</span></h3>
+        <p>If a multiplayer action fails, replay stops, the session pauses and peers are told, instead of two games quietly drifting apart.</p>
+      </article>
+      <article class="card">
+        <h3 style="margin-top:0">More deterministic random numbers, saving and ordering <span class="chip tested">Tested</span></h3>
+        <p>Nested random-number scopes are restored even after errors, a stale saving flag is cleared, and water sources are applied in a consistent order.</p>
+      </article>
+      <article class="card">
+        <h3 style="margin-top:0">Demolition and input fixes <span class="chip tested">Tested</span></h3>
+        <p>A replayed demolition selection that included already-demolished buildings no longer ends the session, equal-distance demolition jobs are chosen deterministically, and input state is recovered after a desync.</p>
+      </article>
+    </div>
+    <p style="margin-top:1.5rem">The full list is in the <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/blob/main/STABILITY-CHANGELOG.md">changelog</a>.</p>
+  </div>
+</section>
+
+<!-- ============ how it works ============ -->
+<section id="how-it-works">
+  <div class="container narrow">
+    <h2>How it works, in one minute</h2>
+    <p>Timberborn is a single-player game, so BeaverBuddies keeps every player's copy of the game identical instead of streaming one game to everyone.</p>
+    <ol>
+      <li><b>Everyone starts from the same save.</b> The host sends the save when a friend joins.</li>
+      <li><b>Every action is mirrored.</b> Building, changing a recipe or setting a priority is sent to the host, which decides which tick it happens on and sends it to everyone.</li>
+      <li><b>The game is deterministic.</b> Given the same save and the same actions on the same ticks, every copy of the game plays out exactly the same.</li>
+    </ol>
+    <p>That is why <b>everyone must run the same build</b>, why other mods should match, and why nobody can join once the host has started. When something breaks that sameness, that is a desync. The <a href="https://github.com/thomaswp/BeaverBuddies/wiki/How-does-it-work%3F">original project's wiki</a> explains the design in more detail.</p>
+  </div>
+</section>
+
+<!-- ============ honest limits ============ -->
+<section class="tint" id="limits">
+  <div class="container narrow">
+    <h2>Good to know before you play</h2>
+    <ul>
+      <li><b>Everyone must run the exact same build</b> of the mod and the same version of the game.</li>
+      <li><b>Other mods and settings are not compared.</b> Keep your mods and simulation-affecting settings identical.</li>
+      <li><b>Join before the host starts.</b> Nobody can join after <b>Start Game</b>.</li>
+      <li><b>Desyncs can still happen.</b> This fork removes known causes; it cannot promise none. Keep backups of your saves.</li>
+      <li><b>Tested with two players on Windows and Steam.</b> Larger groups and other platforms have not been tried.</li>
+    </ul>
+    <p>More answers are in the <a href="faq.html">FAQ</a>, and <a href="troubleshooting.html">Troubleshooting</a> covers what to do when something goes wrong.</p>
+  </div>
+</section>
+
+<!-- ============ what's new ============ -->
+<section id="whats-new">
+  <div class="container narrow">
+    <h2>What's new in 1.0.1</h2>
+    <ul>
+      <li><b>Faster guest input.</b> A guest's actions reach the host as soon as they are made, removing about half a tick of input delay.</li>
+      <li><b>Lighter overhead.</b> Desync tracing no longer sends stack traces between players, and the per-tick and per-frame work makes fewer calls into Unity.</li>
+      <li>A noisy log warning is now written once per tick instead of on every check.</li>
+    </ul>
+    <p>Because the code changed, 1.0.1 will not join a session with 1.0.0. <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/tag/v1.0.1">Read the full release notes.</a></p>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="container">
+    <div class="cta-band">
+      <div>
+        <h2>Ready to play?</h2>
+        <p>Download the mod, follow the install guide, and send your friend an invite.</p>
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">Download 1.0.1</a>
+        <a class="btn btn-secondary" href="install.html">Install guide</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <h2>BeaverBuddies Stability Fork</h2>
+        <p>Multiplayer co-op for Timberborn, with Steam friend invites, a connection panel and stability fixes. Free and open source under the GPL-3.0.</p>
+      </div>
+      <div>
+        <h2>Guides</h2>
+        <ul>
+          <li><a href="install.html">Install guide</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Project</h2>
+        <ul>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork">Source code</a></li>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases">All releases</a></li>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/blob/main/STABILITY-CHANGELOG.md">Changelog</a></li>
+          <li><a href="https://github.com/thomaswp/BeaverBuddies">The original BeaverBuddies</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="fineprint">An independent fork of BeaverBuddies by thomaswp and contributors, whose multiplayer design this builds on. Timberborn is made by Mechanistry; this is an unofficial community mod and is not affiliated with or endorsed by them.</p>
+  </div>
+</footer>
+</body>
+</html>

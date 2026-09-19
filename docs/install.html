@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Install guide: BeaverBuddies Stability Fork</title>
+  <meta name="description" content="How to install BeaverBuddies Stability Fork for Timberborn, host or join a co-op game over Steam, direct IP or Hamachi, and what each setting does.">
+  <meta name="theme-color" content="#b9530f">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#b9530f"/><path d="M14 46V18h15c6 0 9.5 3 9.5 7.6 0 3-1.7 5.3-4.4 6.4 3.6 1 5.7 3.6 5.7 7.2 0 5-3.9 7.8-10 7.8H14z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><circle cx="49.5" cy="41" r="4.5" fill="#fff"/></svg>
+      <span>BeaverBuddies<small>Stability Fork</small></span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="index.html">Features</a>
+      <a href="install.html" aria-current="page">Install</a>
+      <a href="troubleshooting.html">Troubleshooting</a>
+      <a href="faq.html">FAQ</a>
+      <a class="nav-cta" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="page-hero">
+  <div class="container">
+    <h1>Install guide</h1>
+    <p>From download to your first co-op session. Every player follows the install steps; only the host needs to load a save.</p>
+  </div>
+</div>
+
+<div class="container doc">
+  <nav class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul>
+      <li><a href="#requirements">Before you start</a></li>
+      <li><a href="#install">Install the mod</a></li>
+      <li><a href="#verify">Check it loaded</a></li>
+      <li><a href="#host">Host a game</a></li>
+      <li><a href="#join">Join a game</a></li>
+      <li><a href="#playing">While you play</a></li>
+      <li><a href="#desync">If a desync happens</a></li>
+      <li><a href="#settings">Settings</a></li>
+      <li><a href="#update">Update or remove</a></li>
+    </ul>
+  </nav>
+
+  <div class="prose">
+
+    <section id="requirements">
+      <h2>Before you start</h2>
+      <ul>
+        <li><b>Timberborn</b> on every player's computer. This release is built and tested against version <b>1.1.2.4</b> on Windows with the Steam version of the game, and everyone must run the same game version.</li>
+        <li>The <b>Harmony</b> and <b>Mod Settings</b> mods, which this mod needs. Get Harmony from the <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3284904751">Steam Workshop</a> and Mod Settings from the <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3283831040">Steam Workshop</a> or <a href="https://mod.io/g/timberborn/m/mod-settings">mod.io</a>.</li>
+        <li>For <b>Steam invites</b>: both players online in Steam and both owning Timberborn on Steam.</li>
+      </ul>
+      <div class="callout warn">
+        <strong class="label">Important</strong>
+        <p><b>Every player must install the exact same download.</b> The mod checks the game version and its own files when someone joins, and it refuses mismatches. This is the most common cause of trouble.</p>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>Install the mod</h2>
+      <ol class="steps compact">
+        <li>
+          <h3>Download</h3>
+          <p>Go to the <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">latest release</a> and download <code>BeaverBuddies-stability-1.0.1.zip</code>. The release also has a <code>1.0.1-SHA256SUMS.txt</code> file if you want to check the download.</p>
+        </li>
+        <li>
+          <h3>Close Timberborn</h3>
+          <p>Make sure the game is not running while you replace files.</p>
+        </li>
+        <li>
+          <h3>Extract and copy</h3>
+          <p>Extract the zip and copy the <code>BeaverBuddies-StabilityPreview</code> folder into your Timberborn <code>Mods</code> folder:</p>
+          <div class="path"><code>Documents\Timberborn\Mods</code><button class="copy" type="button">Copy</button></div>
+          <p>You should end up with <code>Mods\BeaverBuddies-StabilityPreview\version-1.1\manifest.json</code>. If you already have an older copy, replace it.</p>
+        </li>
+        <li>
+          <h3>Keep only one BeaverBuddies</h3>
+          <p>Unsubscribe from or remove the Workshop BeaverBuddies and any other copy. They share the same mod ID and will conflict.</p>
+        </li>
+        <li>
+          <h3>Start Timberborn and enable the mods</h3>
+          <p>Open the mod manager from the main menu and enable <b>Harmony</b>, <b>Mod Settings</b> and <b>BeaverBuddies - Stability Fork</b>. Restart the game if it asks you to.</p>
+        </li>
+        <li>
+          <h3>Make sure your friends do the same</h3>
+          <p>Everyone needs the same zip, then a full restart of the game.</p>
+        </li>
+      </ol>
+      <div class="callout tip">
+        <strong class="label">Why is the folder called "StabilityPreview"?</strong>
+        <p>It keeps its original name on purpose, so an update replaces the old copy instead of sitting next to it. Two folders with the same mod ID would conflict.</p>
+      </div>
+      <p>To check the download, open PowerShell in the folder you saved it to and compare the result with <code>1.0.1-SHA256SUMS.txt</code>:</p>
+      <pre><code>Get-FileHash .\BeaverBuddies-stability-1.0.1.zip -Algorithm SHA256</code></pre>
+    </section>
+
+    <section id="verify">
+      <h2>Check it loaded</h2>
+      <ul>
+        <li>The mod list shows <b>BeaverBuddies - Stability Fork</b> with version <b>1.0.1</b>.</li>
+        <li>The main menu has a <b>Join co-op game</b> button.</li>
+        <li>Your game log, <code>%USERPROFILE%\AppData\LocalLow\Mechanistry\Timberborn\Player.log</code>, contains the line <code>BeaverBuddies v1.0.1 is loaded!</code></li>
+      </ul>
+      <p>If it is not there, see <a href="troubleshooting.html#not-loading">The mod does not load</a>.</p>
+    </section>
+
+    <section id="host">
+      <h2>Host a game</h2>
+      <ol>
+        <li>Load the save you want to play and choose <b>Host co-op game</b>.</li>
+        <li>Bring your friends in with one of the three ways below.</li>
+        <li>When your friends appear in the connected-player list, choose <b>Start Game</b>.</li>
+      </ol>
+      <p><b>Nobody can join after you choose Start Game.</b> Friends who arrive late need you to save and host again.</p>
+
+      <h3>Option 1: Steam invite (easiest)</h3>
+      <p>Make sure <b>Enable Steam Networking</b> is on in Mod Settings (it is by default), choose <b>Invite Friends</b>, and pick your friend in Steam's overlay. No port forwarding or extra software is needed. If nothing happens the first moment after hosting starts, click the button again: the Steam lobby is still being created.</p>
+
+      <h3>Option 2: Direct IP</h3>
+      <p>Give your friend your IP address. The default port is <b>25565</b>, and your router must forward it to your computer. Direct IP is offered at the same time as Steam invites.</p>
+
+      <h3>Option 3: Hamachi or another virtual network</h3>
+      <p>A virtual LAN such as Hamachi avoids port forwarding, and has been tested and works. Give your friend the address the virtual network assigns you, then join by direct IP.</p>
+    </section>
+
+    <section id="join">
+      <h2>Join a game</h2>
+      <h3>With a Steam invite</h3>
+      <p>Accept the invite from the Steam notification or overlay. If Timberborn is closed, Steam launches it and joins for you. If the host has <b>Allow Friends to Join Directly via Steam</b> on (it is by default), you can also use <b>Join Game</b> from the host's entry in your Steam friends list.</p>
+      <h3>With an IP address</h3>
+      <p>From the main menu choose <b>Join co-op game</b> and enter the host's IP address or domain name.</p>
+      <p>Guests receive a copy of the host's save. It is kept under <b>Online Games</b>.</p>
+    </section>
+
+    <section id="playing">
+      <h2>While you play</h2>
+      <ul>
+        <li>The <a href="index.html#panel">connection panel</a> shows who is connected, their ping, whether you are in sync and the tick rate. Click its title to collapse it.</li>
+        <li>Teammates' cursors and selections appear on your screen. Change how each looks in <b>Options</b> (Esc), <b>Player cursors</b>.</li>
+        <li>To ping a location on the map for everyone, bind a key for <b>Ping Location</b> in the game's keybinding settings.</li>
+        <li>Set your own <b>Ping Display Name</b> and <b>Ping Color</b> in Mod Settings so your friends can tell you apart.</li>
+      </ul>
+    </section>
+
+    <section id="desync">
+      <h2>If a desync happens</h2>
+      <p>A desync means the players' games have drifted apart. The game tells you, and the host should:</p>
+      <ol>
+        <li>Choose <b>Save and Rehost</b>.</li>
+        <li>Steam guests accept a fresh invite; direct IP guests reconnect.</li>
+      </ol>
+      <p>If the game says multiplayer has stopped because an action could not be completed, return to the main menu and reload a known-good save. Do not overwrite your good save with that session. More help is in <a href="troubleshooting.html#desync">Troubleshooting</a>.</p>
+    </section>
+
+    <section id="settings">
+      <h2>Settings</h2>
+      <p>Open <b>Mod Settings</b> from the game's mod menu and choose BeaverBuddies.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Setting</th><th>Default</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><b>Enable Steam Networking</b></td><td>On</td><td>Lets players join your games through Steam.</td></tr>
+            <tr><td><b>Allow Friends to Join Directly via Steam</b></td><td>On</td><td>Friends can join from Steam's friends list without an invite.</td></tr>
+            <tr><td><b>Player activity indicators</b></td><td>On</td><td>Shares your cursor, selection and recent edits and shows other players'.</td></tr>
+            <tr><td><b>Ping Display Name</b></td><td>Player</td><td>The name others see next to your pings, cursor and edits.</td></tr>
+            <tr><td><b>Ping Color</b></td><td>Yellow</td><td>The color of your pings on everyone's screen.</td></tr>
+            <tr><td><b>Connection panel</b></td><td>Expanded</td><td>Expanded, Collapsed or Hidden.</td></tr>
+            <tr><td><b>Connection panel position</b></td><td>Top left</td><td>Top left, top right, bottom left or bottom right.</td></tr>
+            <tr><td><b>Always Use Detailed Logging</b></td><td>Off</td><td>Records extra detail for diagnosing desyncs, but costs performance. Leave it off unless you are hunting a desync.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>There is also an optional <b>Toggle connection panel</b> key under <b>Options, Bindings, BeaverBuddies</b>. It is unbound until you choose one.</p>
+    </section>
+
+    <section id="update">
+      <h2>Update or remove</h2>
+      <ul>
+        <li><b>Update:</b> download the new zip, close the game, and replace the <code>BeaverBuddies-StabilityPreview</code> folder. Everyone updates together, because different builds will not join each other.</li>
+        <li><b>Remove:</b> disable the mod in the mod manager, or delete the <code>BeaverBuddies-StabilityPreview</code> folder from <code>Mods</code>.</li>
+      </ul>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <h2>BeaverBuddies Stability Fork</h2>
+        <p>Multiplayer co-op for Timberborn, with Steam friend invites, a connection panel and stability fixes. Free and open source under the GPL-3.0.</p>
+      </div>
+      <div>
+        <h2>Guides</h2>
+        <ul>
+          <li><a href="install.html">Install guide</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Project</h2>
+        <ul>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork">Source code</a></li>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases">All releases</a></li>
+          <li><a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/blob/main/STABILITY-CHANGELOG.md">Changelog</a></li>
+          <li><a href="https://github.com/thomaswp/BeaverBuddies">The original BeaverBuddies</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="fineprint">An independent fork of BeaverBuddies by thomaswp and contributors, whose multiplayer design this builds on. Timberborn is made by Mechanistry; this is an unofficial community mod and is not affiliated with or endorsed by them.</p>
+  </div>
+</footer>
+<script src="assets/site.js" defer></script>
+</body>
+</html>
