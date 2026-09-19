@@ -17,6 +17,11 @@ namespace BeaverBuddies
 {
     public class ManualMethodOverwrite : Attribute { }
     public static class Plugin { public static void Log(string s) { } public static void LogWarning(string s) { } }
+    public static class TimeTimePatcher
+    {
+        public static float SimulationTime => UnityEngine.Time.time;
+        public static float TickLength => UnityEngine.Time.fixedDeltaTime;
+    }
     public static class SingletonManager
     {
         public static TickProgressService Progress = new();
@@ -27,6 +32,8 @@ namespace BeaverBuddies
         public float Time;
         public float TimeAtLastTick(Timberborn.EntitySystem.EntityComponent e) => Time;
         public float PercentTicked(Timberborn.EntitySystem.EntityComponent e) => 0;
+        public float InterpolatedTime(Timberborn.EntitySystem.EntityComponent e, float simulationTime, float tickLength) =>
+            TimeAtLastTick(e) + tickLength * PercentTicked(e);
     }
 }
 namespace BeaverBuddies.IO { public static class EventIO { public static bool IsNull; } }

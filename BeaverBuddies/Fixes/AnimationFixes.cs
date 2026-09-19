@@ -37,16 +37,19 @@ private void Update(float deltaTime)
 
             //Vector3 position = Vector3.zero;
 
-            float time = Time.time;
+            // The patched Time.time and the tick length, as plain managed values: the patched
+            // getter is a native detour back into managed code, which is expensive to call for
+            // every animated character on every frame.
+            float simulationTime = TimeTimePatcher.SimulationTime;
+            float tickLength = TimeTimePatcher.TickLength;
+            float time = simulationTime;
             EntityComponent entity = __instance.GetComponent<EntityComponent>();
             if (entity != null)
             {
                 // For the movement animation, use interpolated time based on
                 // how many buckets we've ticked (i.e. how close to the next
                 // time update).
-                time = tickProgressService.TimeAtLastTick(entity) +
-                    Time.fixedDeltaTime *
-                    tickProgressService.PercentTicked(entity);
+                time = tickProgressService.InterpolatedTime(entity, simulationTime, tickLength);
 
                 //if (entity.EntityId.ToString() == "00355d1d-36fd-f115-9c90-6a54dda73a85")
                 //{

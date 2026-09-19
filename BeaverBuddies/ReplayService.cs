@@ -424,6 +424,8 @@ namespace BeaverBuddies
         private void SendEvents()
         {
             if (EventIO.IsNull) return;
+            // Called every frame for a guest, so skip the allocations when there is nothing to send.
+            if (eventsToSend.IsEmpty) return;
             List<ReplayEvent> events = new List<ReplayEvent>();
             while (eventsToSend.TryDequeue(out ReplayEvent replayEvent))
             {
@@ -483,6 +485,15 @@ namespace BeaverBuddies
             if (_speedManager.CurrentSpeed == 0 && TargetSpeed == 0)
             {
                 DoTickIO();
+            }
+            else if (io is ClientEventIO)
+            {
+                // A guest's own actions are only recorded here. They are never played locally
+                // and the guest does not hash them: the host decides which tick they run on when
+                // it replays them and sends them back. So they can leave as soon as they are made
+                // instead of waiting for the next tick boundary, which saves about half a tick
+                // of input delay on average.
+                SendEvents();
             }
             UpdateSpeed();
         }
@@ -629,6 +640,9 @@ namespace BeaverBuddies
 
         public int NextBucket { get; private set; } = 0;
 
+        // The last tick a "not ready to tick" warning was logged for.
+        private int lastNotReadyWarningTick = -1;
+
         public ReplayService replayService { get; set; }
 
         // Should be ok non-concurrent - for now only main thread call this
@@ -687,10 +701,14 @@ namespace BeaverBuddies
                     // In theory the game should be paused to prevent this, but some logs
                     // suggest the client can get ahead of the server, which would
                     // trigger this warning (and now prevent the client's tick)
-                    if (replayService.TicksSinceLoad > 0)
+                    int tick = replayService.TicksSinceLoad;
+                    // This runs every time the game asks to tick, which can be every frame while a
+                    // caught-up guest waits for the host, so log it once per tick.
+                    if (tick > 0 && tick != lastNotReadyWarningTick)
                     {
+                        lastNotReadyWarningTick = tick;
                         Plugin.LogWarning($"Client trying to tick before receiving " +
-                            $"Heartbeat at tick: {replayService.TicksSinceLoad}");
+                            $"Heartbeat at tick: {tick}");
                     }
                     return false;
                 }

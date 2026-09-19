@@ -22,8 +22,11 @@ namespace BeaverBuddies
 
         public bool HasTicked(EntityComponent tickableEntity)
         {
-            int bucketIndex = GetEntityBucketIndex(tickableEntity);
+            return HasTicked(GetEntityBucketIndex(tickableEntity));
+        }
 
+        private bool HasTicked(int bucketIndex)
+        {
             // If the next ticked bucket is 0, this means we either just ticked the replay
             // service (meaning *no* entities have ticked this tick) or or we're just about to
             // (meaning *all* entities have ticked this tick).
@@ -43,7 +46,11 @@ namespace BeaverBuddies
 
         public float PercentTicked(EntityComponent tickableEntity)
         {
-            int bucketIndex = GetEntityBucketIndex(tickableEntity);
+            return PercentTicked(GetEntityBucketIndex(tickableEntity));
+        }
+
+        private float PercentTicked(int bucketIndex)
+        {
             int currentIndex = TickableBucketService._nextBucketIndex;
             // Figure out how many buckets have ticked since this entity's bucket
             int numerator = currentIndex - bucketIndex;
@@ -60,6 +67,19 @@ namespace BeaverBuddies
                 return time;
             }
             return time - Time.fixedDeltaTime;
+        }
+
+        /// <summary>
+        /// The time to animate an entity at: when it last ticked, plus the fraction of a tick that has
+        /// passed since. The same arithmetic as TimeAtLastTick(e) + tickLength * PercentTicked(e), with
+        /// the entity's bucket looked up once instead of twice and the clock and tick length passed in
+        /// as plain values instead of read from Unity.
+        /// </summary>
+        public float InterpolatedTime(EntityComponent tickableEntity, float simulationTime, float tickLength)
+        {
+            int bucketIndex = GetEntityBucketIndex(tickableEntity);
+            float timeAtLastTick = HasTicked(bucketIndex) ? simulationTime : simulationTime - tickLength;
+            return timeAtLastTick + tickLength * PercentTicked(bucketIndex);
         }
     }
 }
