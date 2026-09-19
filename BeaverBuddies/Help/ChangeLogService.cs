@@ -9,6 +9,10 @@ namespace BeaverBuddies.Help
     {
         private const string VersionKey = "BeaverBuddies.LastSeenVersion";
 
+        // This fork does not show the original project's changelog dialog when the mod version
+        // changes (its own changes are listed in STABILITY-CHANGELOG.md). Set to true to restore it.
+        private const bool ShowChangeLogOnUpdate = false;
+
         private DialogBoxShower _dialogBoxShower;
 
         internal ChangeLogService(
@@ -53,7 +57,7 @@ namespace BeaverBuddies.Help
         {
             Plugin.Log("Post Load");
             // Don't show the changelog if they're already seeing the first timer message
-            if (Settings.ShouldShowFirstTimerMessage || !ShouldShowChangeLog())
+            if (!ShowChangeLogOnUpdate || Settings.ShouldShowFirstTimerMessage || !ShouldShowChangeLog())
             {
                 return;
             }
