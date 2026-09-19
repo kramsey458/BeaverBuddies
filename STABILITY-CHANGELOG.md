@@ -10,6 +10,26 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## 1.1.3 (pre-release) - Connection panel and Steam invites
+
+Built on 1.1.1. Includes the Steam relay invites first released as 1.1.2-steam.1 (see the entry
+below), so one build has both. See `CONNECTION-PANEL.md`.
+
+- Add a small HUD panel during multiplayer showing connected players, each player's ping
+  (green, yellow or red), whether you are in sync, the tick rate, game speed, how far a
+  guest is behind the host, and whether players are connected directly or through Steam.
+- It collapses to one line by clicking its title (remembered), and can be hidden from Mod
+  Settings or with an optional key. Its corner is a setting.
+- Ping is measured by the network layer (a probe once a second, answered on the guest's
+  network thread) so it works the same over Hamachi, direct IP and Steam. Probes and the
+  player roster use the separate presentation lane: never replayed, never hashed, never
+  sent to a guest that is still joining, and validated on arrival.
+- The panel docks into the game's own HUD layout, and only reads: it sends no gameplay
+  event, and if it fails it disables itself.
+- 87 StabilityTests and 55 RuntimeChecks pass; Release Steam and non-Steam builds succeed.
+  The panel's ping and roster feed is tested over the Steam transport as well as direct connections.
+  The panel's appearance and controls have **not** been seen in the running game.
+
 ## 1.1.2-steam.1 (pre-release) - Steam relay invites
 
 Built on 1.1.1.
