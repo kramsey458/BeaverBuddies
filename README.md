@@ -2,7 +2,7 @@
 
 Multiplayer co-op for Timberborn, with **Steam friend invites**, an **in-game connection panel**, and a long list of crash and desync fixes.
 
-**Latest release: [1.0.1](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest)** · built for Timberborn **1.1.2.4** · tested on Windows with the Steam version of the game · GPL-3.0
+**Latest release: [1.0.2](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest)** · built for Timberborn **1.1.2.4** · tested on Windows with the Steam version of the game · GPL-3.0
 
 This is an independent fork of [thomaswp/BeaverBuddies](https://github.com/thomaswp/BeaverBuddies), the original multiplayer mod. It keeps everything the original does (players build one colony together in real time, each with their own camera and interface, multi-start maps, map pings, hosting and joining from the in-game menus) and builds on top of it. All credit for the multiplayer design belongs to the original project. Please report problems with *this fork* here, not to the original project.
 
@@ -20,10 +20,10 @@ This is an independent fork of [thomaswp/BeaverBuddies](https://github.com/thoma
 
 **You need:** Timberborn (this release is built and tested against **1.1.2.4**), with the **Harmony** and **Mod Settings** mods enabled. Every player must run the same game version too.
 
-1. Download `BeaverBuddies-Stability-Fork-1.0.1.zip` from the [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest).
+1. Download `BeaverBuddies-Stability-Fork-1.0.2.zip` from the [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest).
 2. **Close Timberborn.**
 3. Extract the zip and copy the `BeaverBuddies-Stability-Fork` folder into `Documents\Timberborn\Mods`. If you installed an earlier download, delete its old `BeaverBuddies-StabilityPreview` folder first: the two share a mod ID and would conflict.
-4. Start Timberborn and enable **BeaverBuddies - Stability Fork** (v1.0.1) in the mod list. **Disable the Workshop BeaverBuddies and any other BeaverBuddies copy**: they share the same mod ID and will conflict.
+4. Start Timberborn and enable **BeaverBuddies - Stability Fork** (v1.0.2) in the mod list. **Disable the Workshop BeaverBuddies and any other BeaverBuddies copy**: they share the same mod ID and will conflict.
 5. **Every player must install the exact same download** and restart the game. This is the most common cause of trouble; see [Things to know](#things-to-know-before-you-play).
 
 This fork is distributed through GitHub Releases only. The Steam Workshop and mod.io pages linked further down belong to the original project.
@@ -124,7 +124,7 @@ Each item says how well it is confirmed: **confirmed** means the maintainer veri
 
 ## Testing and verification
 
-The 1.0.1 validation run passed **148 checks**: **87** in `StabilityTests` (network transport, the Steam transport against a simulated Steam network, protocol parity between direct and Steam connections, player activity, ping measurement and the panel), **59** in `RuntimeChecks` (the compiled mod running against the game's own assemblies: random-number scopes, water simulation, demolition, input recovery, desync traces), and **2** Python snapshot-comparison checks. Both Steam and non-Steam builds compile with no warnings.
+The 1.0.2 validation run passed **158 checks**: **97** in `StabilityTests` (network transport, the Steam transport against a simulated Steam network, protocol parity between direct and Steam connections, player activity, ping measurement, the panel and the guest catch-up rule), **59** in `RuntimeChecks` (the compiled mod running against the game's own assemblies: random-number scopes, water simulation, demolition, input recovery, desync traces), and **2** Python snapshot-comparison checks. Both Steam and non-Steam builds compile with no warnings.
 
 These checks cannot start Unity or prove full multiplayer determinism, and they need the game installed locally (no proprietary game files are included in this repository). See [StabilityTests/README.md](StabilityTests/README.md) for how to run them. The maintainer's real playtests, described above, are what confirm behavior in the live game.
 

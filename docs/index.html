@@ -37,13 +37,13 @@
 <div class="hero">
   <div class="container hero-grid">
     <div>
-      <div class="eyebrow">Timberborn co-op mod &middot; v1.0.1</div>
+      <div class="eyebrow">Timberborn co-op mod &middot; v1.0.2</div>
       <h1>Build your colony together.</h1>
       <p class="lede">BeaverBuddies Stability Fork lets you and your friends run one Timberborn colony at the same time, with Steam friend invites, a live connection panel, and fixes for the crashes and desyncs that make multiplayer painful.</p>
       <div class="btn-row">
         <a class="btn btn-primary" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
-          Download 1.0.1
+          Download 1.0.2
         </a>
         <a class="btn btn-secondary" href="install.html">Read the install guide</a>
       </div>
@@ -69,7 +69,7 @@
 <div class="facts">
   <div class="container">
     <ul>
-      <li><b>1.0.1</b><span>Latest release</span></li>
+      <li><b>1.0.2</b><span>Latest release</span></li>
       <li><b>Timberborn 1.1.2.4</b><span>Built and tested against</span></li>
       <li><b>Windows + Steam</b><span>Tested platform</span></li>
       <li><b>Two players</b><span>Tested group size</span></li>
@@ -303,13 +303,13 @@
 <!-- ============ what's new ============ -->
 <section id="whats-new">
   <div class="container narrow">
-    <h2>What's new in 1.0.1</h2>
+    <h2>What's new in 1.0.2</h2>
     <ul>
-      <li><b>Faster guest input.</b> A guest's actions reach the host as soon as they are made, removing about half a tick of input delay.</li>
-      <li><b>Lighter overhead.</b> Desync tracing no longer sends stack traces between players, and the per-tick and per-frame work makes fewer calls into Unity.</li>
-      <li>A noisy log warning is now written once per tick instead of on every check.</li>
+      <li><b>Guests keep up at high speed.</b> At speed 7 a guest used to sit 3 to 5 ticks behind the host and never recover, because catching up only started once it was more than 7 ticks behind. It now starts at more than 2 ticks behind, at any speed, so a guest sees the result of its own actions sooner.</li>
+      <li><b>No extra cost.</b> The catch-up speed changes far less often than before, and the host, a paused game and the 10x cap are unchanged.</li>
+      <li>It only changes how fast a guest works through ticks it already has, so it cannot change what anyone simulates.</li>
     </ul>
-    <p>Because the code changed, 1.0.1 will not join a session with 1.0.0. <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/tag/v1.0.1">Read the full release notes.</a></p>
+    <p>Every player should install 1.0.2: the game warns when mod versions differ. <a href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/tag/v1.0.2">Read the full release notes.</a></p>
   </div>
 </section>
 
@@ -321,7 +321,7 @@
         <p>Download the mod, follow the install guide, and send your friend an invite.</p>
       </div>
       <div class="btn-row">
-        <a class="btn btn-primary" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">Download 1.0.1</a>
+        <a class="btn btn-primary" href="https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest">Download 1.0.2</a>
         <a class="btn btn-secondary" href="install.html">Install guide</a>
       </div>
     </div>
