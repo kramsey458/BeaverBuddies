@@ -10,9 +10,10 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
-## Preview 17 — 1.1.0-stability.17
+## 1.1.1 — Preview 17
 
-Built on Preview 8. Previews 9-16 are deprecated and are not included.
+Built on Preview 8. Previews 9-16 are deprecated and are not included. This is the
+same code as the `1.1.0-stability.17` pre-release; only the version number changed.
 
 - Show other players' translucent, colored cursors with names, remote selection
   outlines in each player's color, and **Viewing / Editing** labels on buildings.
@@ -39,7 +40,8 @@ Built on Preview 8. Previews 9-16 are deprecated and are not included.
   `DuplicationEvent` has the same kind of weak spot and is left unchanged.
 - 50 StabilityTests, 55 RuntimeChecks and 2 Python checks pass; Release Steam build
   succeeds. Cursor rendering and the dialog's layout are not covered by automated
-  tests and need a two-player playtest.
+  tests; the fork owner reported that this release works very well in a
+  multiplayer playtest.
 
 ## Preview 8 — 1.1.0-stability.8
 
