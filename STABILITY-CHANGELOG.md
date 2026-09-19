@@ -5,10 +5,10 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
-## 1.0.2 (pre-release)
+## 1.0.2
 
-A pre-release for testing. Every player should install this build: the game warns when mod
-versions differ, and mixed versions are untested.
+Every player should install this build: the game warns when mod versions differ, and mixed
+versions are untested.
 
 ### Performance
 
@@ -39,7 +39,8 @@ versions differ, and mixed versions are untested.
 - 97 StabilityTests pass, ten of them new (`CatchUpSpeedChecks`): exact behaviour at each speed,
   never slower than the original rule, the paused case, the host case, and the hitching-guest
   model above. The rule is a pure function (`BeaverBuddies/CatchUpSpeed.cs`) linked into the tests.
-- Not yet played in a multiplayer session.
+- Two Python checks pass, and the non-Steam build also succeeds with no warnings.
+- The fork owner played this build in multiplayer and reported that it works great.
 
 ## 1.0.1
 
@@ -251,13 +252,13 @@ The first official release of this fork. See `STEAM-INVITES.md`, `CONNECTION-PAN
 ## Installation
 
 1. Fully close Timberborn on every computer.
-2. Download `BeaverBuddies-Stability-Fork-1.0.1.zip` from the
+2. Download `BeaverBuddies-Stability-Fork-1.0.2.zip` from the
    [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest),
    extract it, and copy the `BeaverBuddies-Stability-Fork` folder into
    `Documents/Timberborn/Mods`. If you installed an earlier download, delete its old
    `BeaverBuddies-StabilityPreview` folder first: the two share a mod ID and would conflict.
 3. Make sure **Harmony** and **Mod Settings** are enabled, then enable **BeaverBuddies -
-   Stability Fork**, version **1.0.1**, on every computer. Disable the Workshop
+   Stability Fork**, version **1.0.2**, on every computer. Disable the Workshop
    BeaverBuddies and any duplicate local copies: they share one mod ID.
 4. Every player must use the same build. Test on a copied save first.
 
@@ -273,9 +274,10 @@ comparison commands.
 
 ## Validation and limits
 
-The 1.0.1 validation run passed **148 checks**: 87 in `StabilityTests` (network transport,
+The 1.0.2 validation run passed **158 checks**: 97 in `StabilityTests` (network transport,
 the Steam transport against a simulated Steam network, direct-versus-Steam protocol parity,
-animation, player activity, ping measurement and the connection panel), 59 in
+animation, player activity, ping measurement, the connection panel and the guest catch-up
+rule), 59 in
 `RuntimeChecks` (the compiled mod running against the game's own assemblies) and two Python
 archive-comparison checks. The mod builds against Timberborn 1.1.2.4 with no warnings.
 Tests require .NET 8; game-dependent checks additionally require the user's installed game
