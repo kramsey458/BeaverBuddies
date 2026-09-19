@@ -5,6 +5,33 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
+## 1.0.5 (pre-release)
+
+A pre-release for testing, on top of 1.0.4. Every player should install this build.
+
+### A guest could be dropped, and then crash, right after a long load
+
+Seen in a 1.0.4 session: a guest finished a 40 second load, its first network read failed with
+`Steam networking error: ppOutMessages must be the same size as nMaxMessages!`, the connection
+closed, and the game then crashed with a `NullReferenceException` in `PanelStack.Show`.
+
+- **The dropped connection.** Steam messages are read in batches into a buffer of 64, up to 256
+  per update. Steamworks.NET refuses a read whose requested count differs from the buffer's
+  length. The code asked for "whatever is left of the 256" on each call, which is 64 for every
+  call except the last one of an update when between 193 and 255 messages are waiting. That only
+  happens when many messages have piled up, as they do while a guest spends a long time loading
+  (more so with debug mode on, which sends more). Every read now asks for exactly one full
+  buffer; the 256 is a soft limit that can be passed by less than one buffer. The loop lives in
+  `ReceiveBatching.Drain` so it can be tested: a new check drives it with 0 to 1000 waiting
+  messages against a fake that refuses a mismatched count, as Steam's wrapper does.
+- **The crash.** The guest's "could not connect" handler is created in the main menu and used
+  that menu's dialog stack. It is also what reports a connection lost later, in the game, when
+  that stack no longer exists; showing the dialog threw, nothing caught it, and the game
+  crashed. The handler now falls back to the game's own dialog, and if that fails too it only
+  logs. A lost connection can no longer crash the game from here.
+
+Neither change affects what anyone simulates.
+
 ## 1.0.4 (pre-release)
 
 A pre-release for testing. Every player should install this build: the game warns when mod

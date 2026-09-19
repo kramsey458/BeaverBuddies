@@ -123,13 +123,10 @@ namespace BeaverBuddies.Steam
 
         public int Receive(ulong connection, Action<byte[]> deliver, int max)
         {
-            int total = 0;
-            while (total < max)
-            {
-                int count = SteamNetworkingSockets.ReceiveMessagesOnConnection(Conn(connection), messages, Math.Min(messages.Length, max - total));
-                if (count < 0) return -1;
-                if (count == 0) break;
-                for (int i = 0; i < count; i++)
+            // Always a full buffer per call; see ReceiveBatching for why the count must equal its length.
+            return ReceiveBatching.Drain(messages.Length, max,
+                count => SteamNetworkingSockets.ReceiveMessagesOnConnection(Conn(connection), messages, count),
+                i =>
                 {
                     try
                     {
@@ -144,10 +141,7 @@ namespace BeaverBuddies.Steam
                         SteamNetworkingMessage_t.Release(messages[i]);
                         messages[i] = IntPtr.Zero;
                     }
-                }
-                total += count;
-            }
-            return total;
+                });
         }
 
         public void Close(ulong connection, int reason, string debug, bool linger)

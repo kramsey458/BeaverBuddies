@@ -101,7 +101,19 @@ namespace BeaverBuddies.Connect
             Plugin.Log("Connecting client");
             client = ClientEventIO.Create(socket, LoadMap, (error) =>
             {
-                ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
+                // This callback outlives the main menu: it also reports a connection lost after the game
+                // scene has loaded, when the menu's dialog stack no longer exists. In 1.0.4 showing the
+                // dialog then threw, and the uncaught exception crashed the game.
+                try
+                {
+                    ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
+                }
+                catch (Exception menuDialogError)
+                {
+                    Plugin.LogWarning("Could not show the connection error in the menu (" + menuDialogError.Message +
+                                      "); showing it in the game instead.");
+                    ShowErrorInGame(error);
+                }
             });
             
             if (client == null)
@@ -141,6 +153,22 @@ namespace BeaverBuddies.Connect
             else
             {
                 ShowError("BeaverBuddies.JoinCoopGame.ConnectionFailedMessage");
+            }
+        }
+
+        private static void ShowErrorInGame(string error)
+        {
+            try
+            {
+                SingletonManager.GetSingleton<DialogBoxShower>()?.Create()
+                    .SetMessage("The multiplayer connection was lost.\n\"" + error + "\"\n\n" +
+                                "Return to the main menu and join again.")
+                    .SetDefaultCancelButton().Show();
+            }
+            catch (Exception gameDialogError)
+            {
+                // Losing the message is better than losing the game.
+                Plugin.LogError("Could not show the connection error: " + gameDialogError);
             }
         }
 

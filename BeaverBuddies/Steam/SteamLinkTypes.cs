@@ -43,6 +43,36 @@ namespace BeaverBuddies.Steam
     }
 
     /// <summary>Steam's connection end reasons, in words a player can act on.</summary>
+    /// <summary>
+    /// Drains a connection's incoming messages in batches. Steamworks.NET refuses a receive call whose
+    /// requested count differs from the length of the buffer it is given ("ppOutMessages must be the same
+    /// size as nMaxMessages"), so every call asks for exactly one full buffer. 1.0.4 asked for
+    /// "whatever is left of the limit" instead, which made the last call of a pump ask for fewer than the
+    /// buffer holds whenever between 193 and 255 messages were waiting, as they are after a long load, and
+    /// the connection was dropped. The limit is a soft one: the pump may overshoot it by less than one buffer.
+    /// </summary>
+    public static class ReceiveBatching
+    {
+        /// <param name="bufferLength">Length of the buffer every batch is received into.</param>
+        /// <param name="max">Stop starting new batches once this many messages were handled.</param>
+        /// <param name="receiveBatch">Receives up to the given count (always bufferLength); negative on failure.</param>
+        /// <param name="handle">Handles, and must release, the message at the given buffer index.</param>
+        /// <returns>The number of messages handled, or -1 if receiving failed.</returns>
+        public static int Drain(int bufferLength, int max, Func<int, int> receiveBatch, Action<int> handle)
+        {
+            int total = 0;
+            while (total < max)
+            {
+                int count = receiveBatch(bufferLength);
+                if (count < 0) return -1;
+                if (count == 0) break;
+                for (int i = 0; i < count; i++) handle(i);
+                total += count;
+            }
+            return total;
+        }
+    }
+
     public static class SteamEndReasons
     {
         // Application-defined reasons live in Steam's 1000-1999 range.
