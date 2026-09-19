@@ -2,7 +2,7 @@
 
 Multiplayer co-op for Timberborn, with **Steam friend invites**, an **in-game connection panel**, and a long list of crash and desync fixes.
 
-**Latest release: [1.0.2](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest)** · built for Timberborn **1.1.2.4** · tested on Windows with the Steam version of the game · GPL-3.0
+**Latest release: [1.0.3](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest)** · built for Timberborn **1.1.2.4** · tested on Windows with the Steam version of the game · GPL-3.0
 
 This is an independent fork of [thomaswp/BeaverBuddies](https://github.com/thomaswp/BeaverBuddies), the original multiplayer mod. It keeps everything the original does (players build one colony together in real time, each with their own camera and interface, multi-start maps, map pings, hosting and joining from the in-game menus) and builds on top of it. All credit for the multiplayer design belongs to the original project. Please report problems with *this fork* here, not to the original project.
 
@@ -13,17 +13,18 @@ This is an independent fork of [thomaswp/BeaverBuddies](https://github.com/thoma
 - **See what your teammates are doing.** Colored, translucent cursors, selection outlines, and "Viewing / Editing" labels on buildings, with per-player cursor color, size and transparency.
 - **Fewer crashes and desyncs.** Specific, documented fixes for water, animation, random numbers, saving, demolition and input problems (details [below](#how-this-fork-improves-on-the-original)). This reduces known causes; it is **not** a guarantee that a desync can never happen.
 - **Mismatched builds are caught early.** Joining with a different build is refused before the save is sent, with a message that says what to do, instead of failing halfway through.
+- **Mismatched mods are flagged.** When someone joins, both players are warned if their lists of mods differ, naming the mods that are on only one computer or at different versions, so a mismatched mod is caught in the lobby instead of as a desync later. It is a warning, not a block.
 - **Failures are explained.** A failed connection or multiplayer action ends with a plain-language reason (including Steam's own error code) instead of a silent hang.
-- **Tested.** 144 automated checks, including runs against the game's own assemblies. See [Testing](#testing-and-verification).
+- **Tested.** 182 automated checks, including runs against the game's own assemblies. See [Testing](#testing-and-verification).
 
 ## Install
 
 **You need:** Timberborn (this release is built and tested against **1.1.2.4**), with the **Harmony** and **Mod Settings** mods enabled. Every player must run the same game version too.
 
-1. Download `BeaverBuddies-Stability-Fork-1.0.2.zip` from the [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest).
+1. Download `BeaverBuddies-Stability-Fork-1.0.3.zip` from the [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest).
 2. **Close Timberborn.**
 3. Extract the zip and copy the `BeaverBuddies-Stability-Fork` folder into `Documents\Timberborn\Mods`. If you installed an earlier download, delete its old `BeaverBuddies-StabilityPreview` folder first: the two share a mod ID and would conflict.
-4. Start Timberborn and enable **BeaverBuddies - Stability Fork** (v1.0.2) in the mod list. **Disable the Workshop BeaverBuddies and any other BeaverBuddies copy**: they share the same mod ID and will conflict.
+4. Start Timberborn and enable **BeaverBuddies - Stability Fork** (v1.0.3) in the mod list. **Disable the Workshop BeaverBuddies and any other BeaverBuddies copy**: they share the same mod ID and will conflict.
 5. **Every player must install the exact same download** and restart the game. This is the most common cause of trouble; see [Things to know](#things-to-know-before-you-play).
 
 This fork is distributed through GitHub Releases only. The Steam Workshop and mod.io pages linked further down belong to the original project.
@@ -113,7 +114,7 @@ Each item says how well it is confirmed: **confirmed** means the maintainer veri
 ## Things to know before you play
 
 - **Everyone must run the exact same build.** The mod compares the game version and the mod's own files when someone joins. A copy someone compiled themselves can be refused even when the version number matches. If one player is on a different build over Steam, joining can look like it is hanging on "Receiving map...".
-- **Other mods and settings are not checked.** Only the game and BeaverBuddies are compared. Every player should have the same mods at the same versions, and settings that affect the simulation (for example **Reduce the number of forced pauses**) should match. A mismatched third-party mod is a classic cause of desyncs.
+- **Other mods should match; you get a warning when they do not.** When someone joins, both players are shown which mods are on only one computer or at different versions. It is only a warning: mods that only change the interface are usually harmless, but a mod that changes the simulation (a housing mod, for example) will make the games drift apart. Settings are not compared, so settings that affect the simulation (for example **Reduce the number of forced pauses**) should match too.
 - **Join before the host starts.** Nobody can join a game that has already started. After a desync the host uses **Save and Rehost**.
 - **Desyncs can still happen.** This fork reduces known causes, not all of them.
 - **Tested with two players**, on Windows, with the Steam version of Timberborn 1.1.2.4. Other stores, platforms and larger groups have not been tested by this fork. Steam invites need the Steam version of the game.
@@ -124,7 +125,7 @@ Each item says how well it is confirmed: **confirmed** means the maintainer veri
 
 ## Testing and verification
 
-The 1.0.2 validation run passed **158 checks**: **97** in `StabilityTests` (network transport, the Steam transport against a simulated Steam network, protocol parity between direct and Steam connections, player activity, ping measurement, the panel and the guest catch-up rule), **59** in `RuntimeChecks` (the compiled mod running against the game's own assemblies: random-number scopes, water simulation, demolition, input recovery, desync traces), and **2** Python snapshot-comparison checks. Both Steam and non-Steam builds compile with no warnings.
+The 1.0.3 validation run passed **182 checks**: **116** in `StabilityTests` (network transport, the Steam transport against a simulated Steam network, protocol parity between direct and Steam connections, player activity, ping measurement, the panel, the guest catch-up rule and the mod list warning), **64** in `RuntimeChecks` (the compiled mod running against the game's own assemblies: random-number scopes, water simulation, demolition, input recovery, desync traces, the mod list), and **2** Python snapshot-comparison checks. Both Steam and non-Steam builds compile with no warnings.
 
 These checks cannot start Unity or prove full multiplayer determinism, and they need the game installed locally (no proprietary game files are included in this repository). See [StabilityTests/README.md](StabilityTests/README.md) for how to run them. The maintainer's real playtests, described above, are what confirm behavior in the live game.
 

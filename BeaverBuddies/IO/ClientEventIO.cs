@@ -1,4 +1,5 @@
 using System;
+using BeaverBuddies.Connect;
 using TimberNet;
 using static TimberNet.TimberNetBase;
 
@@ -27,10 +28,17 @@ namespace BeaverBuddies.IO
         {
             this.mapReceivedCallback = mapReceivedCallback;
 
-            NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity() };
+            NetBase = new TimberClient(socket)
+            {
+                CompatibilityIdentity = BuildCompatibility.CreateIdentity(),
+                // Mod lists are swapped with the host and compared; a difference is only a warning.
+                CompatibilityAdvisory = ModCompatibility.CreateAdvisory(),
+            };
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnMapReceived += mapReceivedCallback;
+            ModWarnings.Clear();
+            NetBase.OnPeerAdvisory += ModCompatibility.OnPeerAdvisory;
             NetBase.OnLog += Plugin.Log;
             NetBase.OnError += (error) =>
             {
@@ -58,6 +66,7 @@ namespace BeaverBuddies.IO
             NetBase.Close();
             NetBase.OnMapReceived -= mapReceivedCallback;
             NetBase.OnLog -= Plugin.Log;
+            NetBase.OnPeerAdvisory -= ModCompatibility.OnPeerAdvisory;
             NetBase = null;
         }
 
