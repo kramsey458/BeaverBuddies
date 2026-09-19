@@ -167,6 +167,7 @@ namespace BeaverBuddies.Panel
                 HostSilenceSeconds = status.HostSilenceSeconds,
                 TickRate = tickRate,
                 Speed = speed.CurrentSpeed,
+                HostPacingPercent = replay?.HostPacingPercent ?? 100,
             };
 
             // Names come from player activity (the same names other players chose for pings and cursors).
@@ -200,6 +201,7 @@ namespace BeaverBuddies.Panel
         {
             Id = peer.PlayerId, Name = name, IsYou = isYou,
             RttMs = peer.RttMs, SilenceSeconds = peer.SilenceSeconds, Transport = peer.Transport,
+            TicksBehind = peer.TicksBehind,
         };
 
         string NameOf(int id, Dictionary<int, string> names)

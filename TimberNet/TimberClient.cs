@@ -69,7 +69,7 @@ namespace TimberNet
             {
                 // Answered on the network thread, not the game thread, so the host measures the network
                 // and not how busy this player's game happens to be.
-                try { SendDataWithLength(client, MessageToBuffer(StatusFrames.Reply(sequence))); }
+                try { SendDataWithLength(client, MessageToBuffer(StatusFrames.Reply(sequence, TickCount))); }
                 catch (Exception) { /* a dead connection is reported by the reader */ }
             }
             else if (type == StatusFrames.RosterType && StatusFrames.TryParseRoster(message, out int you, out List<PeerStatus> peers))
