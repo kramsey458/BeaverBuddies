@@ -129,11 +129,13 @@ Test("A repeat desync immediately after recovery stops automatic reload loops", 
     SnapshotResyncService.TryRecover(SingletonManager.Replay); f.Service.UpdateSingleton();
     Check(f.Dialogs.Shown==1 && f.Saves.Saves==1 && f.Loader.Loads==1 && SingletonManager.Replay.Frozen);
 });
-Test("Steam invite sessions fall back explicitly instead of entering a broken reconnect", () =>
+Test("Steam snapshot recovery transfers the existing lobby to the new host", () =>
 {
-    var f=new Fixture(); f.Host.HasSteamClients=true;
-    SnapshotResyncService.TryRecover(SingletonManager.Replay); SingletonManager.Replay.Finish(); f.Service.UpdateSingleton();
-    Check(f.Dialogs.Shown==1 && f.Dialogs.Message.Contains("Steam") && f.Saves.Saves==0);
+    var f=new Fixture(); f.Host.HasSteamClients=true; f.Host.Lobby=1234; f.Host.Peers=new ulong[]{22};
+    f.ReloadHost();
+    Check(f.Dialogs.Shown==0 && f.Saves.Saves==1 && f.Loader.Loads==1);
+    Check(((ServerEventIO)EventIO.Get()).Lobby==1234 && f.Host.Lobby==0);
+    Check(((ServerEventIO)EventIO.Get()).Peers.SequenceEqual(new ulong[]{22}));
 });
 Test("A direct-IP drop pauses at a full tick and includes the missing guest in recovery", () =>
 {
@@ -240,6 +242,31 @@ Test("Disk or scene-load failures stop recovery rather than retrying as a networ
     var f=new Fixture();var old=new ClientEventIO();EventIO.Set(old);var net=new TimberClient(new TCPClientWrapper("127.0.0.1",1)){ReconnectToken="ticket"};
     Check(SnapshotResyncService.TryConnectionLost(old,net));SnapshotResyncService.ConnectionFailed("disk full",false);f.Service.UpdateSingleton();
     Check(!SnapshotResyncService.IsReconnecting && f.Dialogs.Shown==1 && f.Connection.Reconnects==1);
+});
+
+Test("Steam guest disconnect uses its original connection for automatic recovery", () =>
+{
+    var f=new Fixture();var old=new ClientEventIO();EventIO.Set(old);
+    var net=new TimberClient(new Peer()){ReconnectToken=new string('A',64)};
+    Check(net.TransportName=="Steam" && SnapshotResyncService.TryConnectionLost(old,net));
+    Check(SnapshotResyncService.IsReconnecting && f.Connection.Reconnects==1);
+});
+Test("A Steam peer drop triggers recovery even in a mixed Steam and direct-IP session", () =>
+{
+    var f=new Fixture();f.Host.HasSteamClients=true;
+    SnapshotResyncService.PeerDisconnected(f.Host,new Peer());
+    Check(SnapshotResyncService.Active);
+    SingletonManager.Replay.Finish();f.Service.UpdateSingleton();
+    Check(f.Saves.Saves==1 && f.Dialogs.Shown==0);
+});
+Test("Host scene loading does not spend the reconnect admission window", () =>
+{
+    var f=new Fixture();f.ReloadGrace();
+    Check(!ReplayService.IsLoaded);
+    f.Service.UpdateSingleton();
+    Check((double)State().GetType().GetField("ReconnectDeadline").GetValue(State())==0);
+    ReplayService.IsLoaded=true;f.Service.UpdateSingleton();
+    Check((double)State().GetType().GetField("ReconnectDeadline").GetValue(State())>TimberNet.ConnectionTelemetry.Now);
 });
 Console.WriteLine($"{total-failed}/{total} passed (production coordinator; mocked Unity scene/save boundaries)");
 return failed==0 ? 0 : 1;

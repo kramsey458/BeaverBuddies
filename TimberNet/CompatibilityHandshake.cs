@@ -78,7 +78,8 @@ namespace TimberNet
                 byte[] length = BitConverter.GetBytes(bytes.Length);
                 if (BitConverter.IsLittleEndian) Array.Reverse(length);
                 stream.Write(length, 0, 4);
-                stream.Write(bytes, 0, bytes.Length);
+                for (int offset = 0; offset < bytes.Length; offset += stream.MaxChunkSize)
+                    stream.Write(bytes, offset, Math.Min(stream.MaxChunkSize, bytes.Length - offset));
             }
         }
     }

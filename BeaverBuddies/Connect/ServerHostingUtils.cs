@@ -109,6 +109,7 @@ namespace BeaverBuddies.Connect
             {
                 List<string> clients = io.NetBase.GetConnectedClients();
                 string content = baseMessage;
+                if (io.SteamListener != null) content = io.SteamListener.Status + "\n\n" + content;
                 int nonLocalID = 1;
                 foreach (string client in clients)
                 {

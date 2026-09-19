@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BeaverBuddies.Events;
 using TimberNet;
-using BeaverBuddies.Steam;
 
 namespace BeaverBuddies.IO
 {
@@ -18,7 +17,6 @@ namespace BeaverBuddies.IO
         public bool IsOutOfEvents => NetBase == null ? true : !NetBase.ShouldTick;
         public int TicksBehind => NetBase == null ? 0 : NetBase.TicksBehind;
 
-        private SteamPacketListener steamPacketListener = null;
 
         public void Close()
         {
@@ -30,7 +28,6 @@ namespace BeaverBuddies.IO
         {
             if (NetBase == null) return;
             NetBase.Update();
-            steamPacketListener?.Update();
         }
 
         private static ReplayEvent ToEvent(JObject obj)
@@ -73,15 +70,5 @@ namespace BeaverBuddies.IO
             return NetBase.HasEventsForTick(tick);
         }
 
-        protected void TryRegisterSteamPacketReceiver(object receiver)
-        {
-            if (!(receiver is ISteamPacketReceiver)) return;
-            if (steamPacketListener == null)
-            {
-                Plugin.Log("Creating SteamPacketListener");
-                steamPacketListener = new SteamPacketListener();
-            }
-            ((ISteamPacketReceiver)receiver).RegisterSteamPacketListener(steamPacketListener);
-        }
     }
 }

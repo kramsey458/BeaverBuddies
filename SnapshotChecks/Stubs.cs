@@ -82,7 +82,11 @@ namespace BeaverBuddies.IO
         public TestNet NetBase = new();
         public byte[] Map;
         public bool HasSteamClients;
-        public void Start(byte[] bytes, ReconnectTickets tickets = null) { Map=bytes; NetBase.ReconnectTickets=tickets; }
+        public ulong Lobby;
+        public ulong DetachSteamLobby() { var lobby=Lobby; Lobby=0; return lobby; }
+        public ulong[] Peers;
+        public ulong[] ExportSteamPeers() => Peers;
+        public void Start(byte[] bytes, ReconnectTickets tickets = null, ulong steamLobby = 0, ulong[] steamPeers = null) { Map=bytes; NetBase.ReconnectTickets=tickets; Lobby=steamLobby; Peers=steamPeers; }
     }
     public class ClientEventIO : EventIO { public TestNet NetBase = new(); }
 }
@@ -102,6 +106,7 @@ namespace BeaverBuddies.Connect
         public int Reconnects;
         public void BeginSnapshotReconnect() => Reconnects++;
         public void ConnectOrShowFailureMessage() => Reconnects++;
+        public void ReconnectOriginal() => Reconnects++;
     }
     public static class ServerHostingUtils
     {

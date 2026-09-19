@@ -81,6 +81,7 @@ namespace BeaverBuddies
             SingletonManager.Reset();
             EventIO.Reset();
             SnapshotResyncService.Reset();
+            SteamGuestLobby.Leave();
 
             Plugin.Log($"Registering Main Menu Services");
             containerDefinition.Bind<ClientConnectionService>().AsSingleton();

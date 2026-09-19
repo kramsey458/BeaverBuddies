@@ -1,73 +1,12 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
-using BeaverBuddies.Steam;
 using Newtonsoft.Json.Linq;
-using Steamworks;
 using TimberNet;
 
 int failures = 0;
 var tests = new (string Name, Action Run)[]
 {
-    ("Steam preserves the tail across three partial reads", () =>
-    {
-        using var s = new SocketScope();
-        s.Socket.ReceiveData(new byte[] {1,2,3,4,5,6});
-        s.Socket.ReceiveData(new byte[] {7,8});
-        var bytes = new byte[8];
-        Equal(2, s.Socket.Read(bytes, 0, 2));
-        Equal(2, s.Socket.Read(bytes, 2, 2));
-        Equal(2, s.Socket.Read(bytes, 4, 2));
-        Equal(2, s.Socket.Read(bytes, 6, 2));
-        Check(bytes.SequenceEqual(new byte[] {1,2,3,4,5,6,7,8}));
-    }),
-    ("Steam reads a header and body from the same packet", () =>
-    {
-        using var s = new SocketScope();
-        s.Socket.ReceiveData(new byte[] {0,0,0,3,9,8,7});
-        s.Socket.ReceiveData(new byte[] {6,5,4}); // original bug incorrectly consumes this
-        ISocketStream stream = s.Socket;
-        Check(stream.ReadUntilComplete(4).SequenceEqual(new byte[] {0,0,0,3}));
-        Check(stream.ReadUntilComplete(3).SequenceEqual(new byte[] {9,8,7}));
-    }),
-    ("Steam zero-length reads do not consume a packet", () =>
-    {
-        using var s = new SocketScope(); s.Socket.ReceiveData(new byte[] {9});
-        Equal(0, s.Socket.Read(new byte[1], 0, 0));
-        var read = Task.Run(() => ((ISocketStream)s.Socket).ReadUntilComplete(1));
-        Check(read.Wait(1000), "read stalled after a zero-length read"); Equal((byte)9, read.Result[0]);
-    }),
-    ("Steam close wakes a blocked reader with EOF", () =>
-    {
-        using var s = new SocketScope();
-        using var started = new ManualResetEventSlim();
-        var read = Task.Run(() => { started.Set(); return s.Socket.Read(new byte[1], 0, 1); });
-        started.Wait(); s.Socket.Close();
-        Check(read.Wait(1000), "blocked reader survived close"); Equal(0, read.Result);
-    }),
-    ("Steam rejects a failed reliable send", () =>
-    {
-        using var s = new SocketScope(); SteamNetworking.SendSucceeds = false;
-        try { Throws<IOException>(() => s.Socket.Write(new byte[1], 0, 1)); }
-        finally { SteamNetworking.SendSucceeds = true; }
-    }),
-    ("Steam rejects writes after close", () =>
-    {
-        using var s = new SocketScope(); s.Socket.Close();
-        Throws<IOException>(() => s.Socket.Write(new byte[1], 0, 1));
-    }),
-    ("Closing an old Steam socket preserves its replacement", () =>
-    {
-        var listener = new SteamPacketListener();
-        var first = new SteamSocket(new CSteamID(1), true);
-        var second = new SteamSocket(new CSteamID(1), true);
-        first.RegisterSteamPacketListener(listener); second.RegisterSteamPacketListener(listener);
-        first.Close();
-        var sockets = (Dictionary<CSteamID, SteamSocket>)typeof(SteamPacketListener)
-            .GetField("sockets", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(listener);
-        Check(sockets.TryGetValue(new CSteamID(1), out var current) && ReferenceEquals(current, second));
-        second.Close();
-    }),
     ("Concurrent sends keep length and payload together", () =>
     {
         var net = new TestNet(); var stream = new RecordingStream();
@@ -141,11 +80,6 @@ static bool Animate(Timberborn.CharacterMovementSystem.MovementAnimator animator
     BeaverBuddies.SingletonManager.Progress.Time = time;
     return (bool)typeof(BeaverBuddies.Fixes.AnimatedPathFollowerUpdatePathcer)
         .GetMethod("Prefix", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] {animator, .02f});
-}
-sealed class SocketScope : IDisposable
-{
-    public SteamSocket Socket = new(new CSteamID(1), true);
-    public void Dispose() => Socket.Close();
 }
 sealed class TestNet : TimberNetBase { public void Send(ISocketStream stream, byte[] data) => SendDataWithLength(stream, data); }
 class ReadStream : ISocketStream

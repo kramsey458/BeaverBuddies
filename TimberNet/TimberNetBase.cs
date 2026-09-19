@@ -24,7 +24,13 @@ namespace TimberNet
         public event Action<ISocketStream, JObject>? OnControl;
         volatile bool draining;
         protected bool CloseDeferred => draining;
-        public Task FlushAsync() => Task.WhenAll(senders.Values.Select(s => s.Drain()));
+        public async Task FlushAsync()
+        {
+            var pending = senders.ToArray();
+            await Task.WhenAll(pending.Select(s => s.Value.Drain())).ConfigureAwait(false);
+            await Task.WhenAll(pending.Select(s => s.Key).OfType<IFlushableSocket>()
+                .Select(s => s.FlushAsync())).ConfigureAwait(false);
+        }
         public int PendingReliableMessages => senders.Values.Sum(s => s.PendingMessages);
         public long PendingReliableBytes => senders.Values.Sum(s => s.PendingData.Bytes);
         public int BufferedEventCount => receivedEvents.Count + receivedEventQueue.Count;
@@ -140,6 +146,7 @@ namespace TimberNet
         private readonly ConcurrentQueue<string> logQueue = new ConcurrentQueue<string>();
         private readonly ConcurrentQueue<string> errorQueue = new ConcurrentQueue<string>();
         private byte[]? mapBytes = null;
+        public string ConnectionStatus { get; protected set; } = "Connecting to host...";
 
         private volatile bool isStopped;
         public bool IsStopped => isStopped;
@@ -530,7 +537,16 @@ namespace TimberNet
 
         private void ReceiveFile(ISocketStream stream, int messageLength)
         {
-            byte[] mapBytes = stream.ReadUntilComplete(messageLength);
+            byte[] mapBytes = new byte[messageLength];
+            int received = 0;
+            while (received < messageLength)
+            {
+                ConnectionStatus = $"Downloading host save: {(long)received * 100 / messageLength}%";
+                int count = stream.Read(mapBytes, received, messageLength - received);
+                if (count <= 0) throw new IOException("Connection closed while downloading the host save.");
+                received += count;
+            }
+            ConnectionStatus = "Loading the shared world...";
             SnapshotDigest = DigestSnapshot(mapBytes);
             AddFileToHash(mapBytes);
             Log($"Received map with length {mapBytes.Length} and Hash: {GetHashCode(mapBytes).ToString("X8")}");

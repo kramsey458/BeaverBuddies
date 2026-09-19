@@ -1,112 +1,162 @@
-﻿using Steamworks;
+using Steamworks;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Threading;
+using System.Linq;
 using TimberNet;
 
 namespace BeaverBuddies.Steam
 {
-    public class SteamListener : ISocketListener, ISteamPacketReceiver
+    public class SteamListener : ISocketListener
     {
+        public const string Protocol = "bb-relay-14";
         public CSteamID LobbyID { get; private set; }
+        public string Status { get; private set; } = "Preparing Steam invites...";
+        readonly object gate = new object();
+        readonly BlockingCollection<ISocketStream> joining = new BlockingCollection<ISocketStream>();
+        readonly Dictionary<HSteamNetConnection, SteamRelaySocket> sockets = new Dictionary<HSteamNetConnection, SteamRelaySocket>();
+        readonly HashSet<HSteamNetConnection> admitted = new HashSet<HSteamNetConnection>();
+        readonly HashSet<ulong> knownPeers = new HashSet<ulong>();
+        readonly HashSet<ulong> recoveryPeers;
+        Callback<SteamNetConnectionStatusChangedCallback_t> connections;
+        CallResult<LobbyCreated_t> created;
+        HSteamListenSocket listener;
+        bool stopped, detached, inviteWhenReady, started;
 
-        private List<IDisposable> callbacks = new List<IDisposable>();
-        private readonly BlockingCollection<SteamSocket> joiningUsers = new BlockingCollection<SteamSocket>();
-        private bool stopped;
-        private SteamPacketListener steamPacketListener;
-
-        public SteamListener()
+        public SteamListener(ulong existingLobby = 0, ulong[] recoveryPeers = null)
         {
-            if (!SteamOverlayConnectionService.IsSteamEnabled)
-            {
-                throw new Exception("SteamListener created when Steam is not enabled!");
-            }
+            LobbyID = new CSteamID(existingLobby);
+            this.recoveryPeers = recoveryPeers == null ? null : new HashSet<ulong>(recoveryPeers);
+            if (recoveryPeers != null) knownPeers.UnionWith(recoveryPeers);
         }
-
-        public void RegisterSteamPacketListener(SteamPacketListener steamPacketListener)
-        {
-            this.steamPacketListener = steamPacketListener;
-        }
+        public ulong[] ExportPeers() { lock (gate) return knownPeers.ToArray(); }
 
         public void Start()
         {
-            if (steamPacketListener == null)
+            if (started || stopped) return;
+            started = true;
+            // A Steam outage must not disable the independent TCP listener.
+            try
             {
-                throw new InvalidOperationException("SteamPacketListener must be registered before starting the SteamListener.");
+                SteamNetworkingUtils.InitRelayNetworkAccess();
+                connections = Callback<SteamNetConnectionStatusChangedCallback_t>.Create(OnConnection);
+                listener = SteamNetworkingSockets.CreateListenSocketP2P(SteamRelaySocket.VirtualPort, 0, null);
+                if (listener == HSteamListenSocket.Invalid) throw new IOException("Steam could not open its relay listener.");
+                if (LobbyID.m_SteamID != 0) ConfigureLobby();
+                else
+                {
+                    created = CallResult<LobbyCreated_t>.Create(OnCreated);
+                    created.Set(SteamMatchmaking.CreateLobby(Settings.LobbyJoinable ? ELobbyType.k_ELobbyTypeFriendsOnly : ELobbyType.k_ELobbyTypePrivate, 8));
+                }
             }
-            Plugin.Log("SteamListener started...");
-            callbacks.Add(Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate));
-            callbacks.Add(Callback<LobbyCreated_t>.Create(OnLobbyCreated));
-            SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 8);
+            catch (Exception error) { Status = "Steam invites unavailable: " + error.Message + " Direct IP is still available."; Plugin.LogWarning(Status); }
         }
 
-        private void OnLobbyCreated(LobbyCreated_t callback)
+        void OnCreated(LobbyCreated_t result, bool ioFailure)
         {
-            // Handle the callback
-            if (callback.m_eResult == EResult.k_EResultOK)
+            lock (gate)
             {
-                // Lobby created successfully
-                LobbyID = new CSteamID(callback.m_ulSteamIDLobby);
-                // Friend only is the default; invisible means invite-only.
-                var type = Settings.LobbyJoinable ? ELobbyType.k_ELobbyTypeFriendsOnly : ELobbyType.k_ELobbyTypeInvisible;
-                SteamMatchmaking.SetLobbyType(LobbyID, type);
-                Plugin.Log($"Lobby created with ID: {LobbyID} is joinable={Settings.LobbyJoinable}");
-            }
-            else
-            {
-                // Handle error
-                Plugin.LogError("Failed to create lobby: " + callback.m_eResult);
+                if (stopped)
+                {
+                    if (!ioFailure && result.m_eResult == EResult.k_EResultOK) SteamMatchmaking.LeaveLobby(new CSteamID(result.m_ulSteamIDLobby));
+                    return;
+                }
+                if (ioFailure || result.m_eResult != EResult.k_EResultOK)
+                { Status = "Could not create the Steam lobby. Check Steam is online; direct IP is still available."; return; }
+                LobbyID = new CSteamID(result.m_ulSteamIDLobby);
+                ConfigureLobby();
+                if (inviteWhenReady) ShowInviteFriendsPanel();
             }
         }
 
-        private void OnLobbyChatUpdate(LobbyChatUpdate_t callback)
+        void ConfigureLobby()
         {
-            if (stopped || callback.m_ulSteamIDLobby != LobbyID.m_SteamID) return;
-            Plugin.Log("Lobby chat update: " + callback.m_ulSteamIDLobby);
-            if ((callback.m_rgfChatMemberStateChange & (uint)EChatMemberStateChange.k_EChatMemberStateChangeEntered) != 0)
-            {
-                CSteamID userJoined = new CSteamID(callback.m_ulSteamIDUserChanged);
-                
-                // Don't include in release
-                //string name = SteamFriends.GetFriendPersonaName(userJoined);
-                //Plugin.Log("User " + name + " has joined the lobby.");
+            SteamMatchmaking.SetLobbyData(LobbyID, "beaverbuddies_protocol", Protocol);
+            SteamMatchmaking.SetLobbyJoinable(LobbyID, true);
+            Status = "Steam invites ready. Invite your friends, then start once everyone is connected.";
+        }
 
-                var socket = new SteamSocket(userJoined, true);
-                socket.RegisterSteamPacketListener(steamPacketListener);
-                try { joiningUsers.Add(socket); }
-                catch (InvalidOperationException) { socket.Close(); }
+        bool IsMember(CSteamID peer)
+        {
+            if (peer == SteamUser.GetSteamID() || LobbyID.m_SteamID == 0) return false;
+            int count = SteamMatchmaking.GetNumLobbyMembers(LobbyID);
+            for (int i = 0; i < count; i++) if (SteamMatchmaking.GetLobbyMemberByIndex(LobbyID, i) == peer) return true;
+            return false;
+        }
+
+        void OnConnection(SteamNetConnectionStatusChangedCallback_t change)
+        {
+            lock (gate)
+            {
+                if (stopped || change.m_info.m_hListenSocket != listener) return;
+                var state = change.m_info.m_eState;
+                if (state == ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connecting)
+                {
+                    foreach (var old in sockets.Where(pair => !pair.Value.Connected).Select(pair => pair.Key).ToArray())
+                    { sockets.Remove(old); admitted.Remove(old); }
+                    if (sockets.ContainsKey(change.m_hConn)) return;
+                    var peer = change.m_info.m_identityRemote.GetSteamID();
+                    bool allowed = recoveryPeers != null ? recoveryPeers.Contains(peer.m_SteamID) : IsMember(peer);
+                    if (!allowed || sockets.Count >= 8)
+                    { SteamNetworkingSockets.CloseConnection(change.m_hConn, 1001, "Join the host's Steam lobby using an invite first.", false); return; }
+                    if (SteamNetworkingSockets.AcceptConnection(change.m_hConn) != EResult.k_EResultOK)
+                    { SteamNetworkingSockets.CloseConnection(change.m_hConn, 1002, "Steam could not accept the connection.", false); return; }
+                    sockets.Add(change.m_hConn, new SteamRelaySocket(peer, change.m_hConn));
+                    knownPeers.Add(peer.m_SteamID);
+                }
+                else if (state == ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_Connected)
+                {
+                    if (sockets.TryGetValue(change.m_hConn, out var socket) && admitted.Add(change.m_hConn))
+                        try { joining.Add(socket); } catch (InvalidOperationException) { socket.Close(); }
+                }
+                else if (state == ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ClosedByPeer ||
+                         state == ESteamNetworkingConnectionState.k_ESteamNetworkingConnectionState_ProblemDetectedLocally)
+                {
+                    if (sockets.TryGetValue(change.m_hConn, out var socket)) socket.Close();
+                    else SteamNetworkingSockets.CloseConnection(change.m_hConn, 0, "Connection ended", false);
+                    sockets.Remove(change.m_hConn); admitted.Remove(change.m_hConn);
+                }
             }
         }
 
         public ISocketStream AcceptClient()
         {
-            Plugin.Log("Waiting to accept a client...");
-            SteamSocket socket;
-            try { socket = joiningUsers.Take(); }
+            try { while (true) { var socket = joining.Take(); if (socket.Connected) return socket; } }
             catch (InvalidOperationException error) { throw new IOException("Steam listener stopped.", error); }
-            Plugin.Log("New client accepted!");
-            return socket;
+        }
+
+        // Transfer the lobby to the replacement listener, keeping invited players together.
+        public ulong DetachLobby()
+        {
+            lock (gate) { detached = true; return LobbyID.m_SteamID; }
         }
 
         public void Stop()
         {
-            stopped = true;
-            joiningUsers.CompleteAdding();
-            while (joiningUsers.TryTake(out var pending)) pending.Close();
-            Plugin.Log("Stopping SteamListener...");
-            SteamMatchmaking.LeaveLobby(LobbyID);
-            foreach (IDisposable callback in callbacks)
+            lock (gate)
             {
-                callback.Dispose();
+                if (stopped) return;
+                stopped = true; joining.CompleteAdding();
+                foreach (var socket in sockets.Values) socket.Close();
+                sockets.Clear(); admitted.Clear();
+                if (listener != HSteamListenSocket.Invalid) SteamNetworkingSockets.CloseListenSocket(listener);
+                if (!detached && LobbyID.m_SteamID != 0) SteamMatchmaking.LeaveLobby(LobbyID);
+                connections?.Dispose();
+                // An outstanding create result must still leave any late-created lobby.
+                if (created != null && !created.IsActive()) created.Dispose();
             }
         }
 
         public void ShowInviteFriendsPanel()
         {
-            SteamFriends.ActivateGameOverlayInviteDialog(LobbyID);
+            lock (gate)
+            {
+                if (stopped) return;
+                if (LobbyID.m_SteamID == 0) { inviteWhenReady = true; return; }
+                inviteWhenReady = false;
+                SteamFriends.ActivateGameOverlayInviteDialog(LobbyID);
+            }
         }
     }
 }

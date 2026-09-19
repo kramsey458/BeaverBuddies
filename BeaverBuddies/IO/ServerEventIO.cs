@@ -35,12 +35,15 @@ namespace BeaverBuddies.IO
         // happen in the same order for the server and clients.
         public override UserEventBehavior UserEventBehavior => UserEventBehavior.QueuePlay;
 
-        public bool HasSteamClients => NetBase?.GetConnections().Any(peer => peer is SteamSocket) == true;
+        public bool HasSteamClients => NetBase?.GetConnections().Any(peer => peer is SteamRelaySocket) == true;
+        public SteamListener SteamListener => (SocketListener as MultiSocketListener)?.GetListener<SteamListener>();
+        public ulong DetachSteamLobby() => SteamListener?.DetachLobby() ?? 0;
+        public ulong[] ExportSteamPeers() => SteamListener?.ExportPeers();
 
         public ISocketListener SocketListener { get; private set; }
 
         // We only support a static map; see note above
-        public void Start(byte[] mapBytes, ReconnectTickets tickets = null)
+        public void Start(byte[] mapBytes, ReconnectTickets tickets = null, ulong steamLobby = 0, ulong[] steamPeers = null)
         {
             try
             {
@@ -50,20 +53,9 @@ namespace BeaverBuddies.IO
                 ];
                 if (SteamOverlayConnectionService.IsSteamEnabled && Settings.EnableSteam)
                 {
-                    listeners.Add(new SteamListener());
+                    listeners.Add(new SteamListener(steamLobby, steamPeers));
                 }
                 SocketListener = new MultiSocketListener(listeners.ToArray());
-                if (SocketListener is MultiSocketListener)
-                {
-                    foreach (ISocketListener child in ((MultiSocketListener)SocketListener).Listeners)
-                    {
-                        TryRegisterSteamPacketReceiver(child);
-                    }
-                }
-                else
-                {
-                    TryRegisterSteamPacketReceiver(SocketListener);
-                }
                 NetBase = new TimberServer(
                     SocketListener,
                     () =>

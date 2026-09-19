@@ -1,21 +1,20 @@
-# Reconnect grace period (Preview 13)
+# Reconnect grace period (Preview 14)
 
-Preview 13 includes Preview 12 and its collapsible connection/simulation HUD.
+Preview 14 extends the Preview 13 recovery flow to Steam invites and mixed sessions.
 Install the same compiled ZIP on every computer and restart Timberborn.
 
 ## What players see
 
 Reconnect grace is enabled by default in BeaverBuddies' mod settings. The host
-also needs automatic snapshot recovery enabled. It supports direct IP, including
-sessions with Steam support enabled where every guest joined by IP. Sessions with
-Steam invite guests retain manual rehosting.
+also needs automatic snapshot recovery enabled. It supports Steam invites, direct IP, and sessions containing both kinds of guest.
 
 After an unexpected established connection closes, the host completes the current
 simulation tick, pauses, and immediately prepares a shared save. All participants
 reload that snapshot; the mod never resumes the disconnected guest's old world.
-The new host listener opens a **30-second reconnect window**. Guests retry their
-original address and port automatically. The countdown starts when that listener
-is ready, not while the host is saving. If everyone is ready sooner, play resumes
+The new host listener accepts returning players while the host loads. A
+**30-second reconnect window** starts once the host scene is loaded, so loading
+does not consume the window. Guests retry their original Steam identity or IP
+address and port automatically. Steam lobby membership is retained across reloads. If everyone is ready sooner, play resumes
 without waiting for the countdown to finish.
 
 The host's recovery dialog shows connected players, the countdown, and two choices:

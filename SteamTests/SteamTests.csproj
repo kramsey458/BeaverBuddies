@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><DefineConstants>IS_STEAM</DefineConstants></PropertyGroup>
+ <ItemGroup>
+  <ProjectReference Include="../TimberNet/TimberNet.csproj" />
+  <Compile Include="../BeaverBuddies/Steam/SteamRelaySocket.cs" Link="SteamRelaySocket.cs" />
+  <Compile Include="../BeaverBuddies/Steam/SteamListener.cs" Link="SteamListener.cs" />
+  <Compile Include="../BeaverBuddies/Steam/SteamOverlayConnectionService.cs" Link="SteamOverlayConnectionService.cs" />
+ </ItemGroup>
+</Project>

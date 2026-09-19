@@ -15,6 +15,7 @@ using Timberborn.WebNavigation;
 using TimberNet;
 using System.Linq;
 using Timberborn.SettlementNameSystem;
+using UnityEngine.UIElements;
 
 namespace BeaverBuddies.Connect
 {
@@ -30,6 +31,15 @@ namespace BeaverBuddies.Connect
         static string reconnectToken;
         double nextReconnect;
         bool snapshotAttempt;
+        DialogBox progress;
+        double nextProgress;
+        bool steamConnection;
+        void HideProgress() { var old = progress; progress = null; old?.Close(); }
+        public void ReconnectOriginal()
+        {
+            if (reconnectSocket != null) { reconnectToken = null; TryToConnect(reconnectSocket()); ShowConnectionMessage(true); }
+            else ConnectOrShowFailureMessage();
+        }
         static double Now => (double)System.Diagnostics.Stopwatch.GetTimestamp() / System.Diagnostics.Stopwatch.Frequency;
         public void BeginSnapshotReconnect()
         {
@@ -56,12 +66,13 @@ namespace BeaverBuddies.Connect
         public bool TryToConnect(CSteamID friendID)
         {
             reconnectToken = null;
-            reconnectSocket = () => new SteamSocket(friendID);
+            reconnectSocket = () => new SteamRelaySocket(friendID);
             return TryToConnect(reconnectSocket());
         }
 
         public bool TryToConnect(string address)
         {
+            SteamGuestLobby.Leave();
             int port = _settings.DefaultPort.Value;
             Plugin.Log("Try to resolve address: " + address);
             // Parse address and port
@@ -106,16 +117,28 @@ namespace BeaverBuddies.Connect
 
         private bool TryToConnect(ISocketStream socket)
         {
+            HideProgress();
+            steamConnection = socket is SteamRelaySocket;
             Plugin.Log("Connecting client");
-            client = ClientEventIO.Create(socket, LoadMap, (error) =>
+            ClientEventIO attempt = null;
+            attempt = ClientEventIO.Create(socket, LoadMap, (error) =>
             {
+                if (attempt != null && attempt != EventIO.Get()) return;
                 if (SnapshotResyncService.Active)
                 {
                     snapshotAttempt = false; nextReconnect = Now + 2;
                     SnapshotResyncService.ConnectionFailed(error);
                 }
-                else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
+                else
+                {
+                    HideProgress();
+                    if (steamConnection) _dialogBoxShower.Create().SetMessage("Could not join through Steam.\n\n" + error + "\n\nCheck both games use the same mod build and ask the host for another invite.").SetDefaultCancelButton().Show();
+                    else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
+                    if (attempt != null && attempt == EventIO.Get()) EventIO.Reset();
+                    SteamGuestLobby.Leave();
+                }
             }, reconnectToken);
+            client = attempt;
 
             if (client == null)
             {
@@ -141,8 +164,11 @@ namespace BeaverBuddies.Connect
         {
             if (success)
             {
-                _dialogBoxShower.Create()
-                    .SetLocalizedMessage("BeaverBuddies.JoinCoopGame.Success")
+                if (client == null || client != EventIO.Get() || client.NetBase == null || client.NetBase.IsStopped) return;
+                HideProgress();
+                progress = _dialogBoxShower.Create()
+                    .SetMessage(client.NetBase.ConnectionStatus)
+                    .SetCancelButton(() => { progress = null; client?.Close(); EventIO.Reset(); SteamGuestLobby.Leave(); }, "Cancel joining")
                     .Show();
             }
             else
@@ -198,6 +224,7 @@ namespace BeaverBuddies.Connect
 
         private void LoadMap(byte[] mapBytes)
         {
+            HideProgress();
             try
             {
                 // Clean up our current co-op state before loading,
@@ -229,12 +256,19 @@ namespace BeaverBuddies.Connect
 
         public void UpdateSingleton()
         {
+            if (progress != null && Now >= nextProgress)
+            {
+                nextProgress = Now + .25;
+                if (client?.NetBase == null || client != EventIO.Get()) HideProgress();
+                else progress.GetPanel().Q<Label>("Message").text = client.NetBase.ConnectionStatus;
+            }
             if (SnapshotResyncService.IsReconnecting && !snapshotAttempt && Now >= nextReconnect)
             {
                 snapshotAttempt = true;
                 try
                 {
                     if (reconnectSocket == null) throw new InvalidOperationException("Original host address is unavailable. Join the host manually.");
+                    if (steamConnection) SteamGuestLobby.Rejoin();
                     if (!TryToConnect(reconnectSocket())) { snapshotAttempt = false; nextReconnect = Now + 2; }
                 }
                 catch (Exception error)

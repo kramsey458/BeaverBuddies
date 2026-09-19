@@ -88,8 +88,10 @@ namespace TimberNet
                 try
                 {
                     var connect = client.ConnectAsync();
-                    if (await Task.WhenAny(connect, Task.Delay(3000)) != connect) throw new ConnectionFailureException();
+                    int timeout = (client as IConnectionOptions)?.ConnectTimeoutMilliseconds ?? 3000;
+                    if (await Task.WhenAny(connect, Task.Delay(timeout)) != connect) throw new ConnectionFailureException();
                     await connect;
+                    ConnectionStatus = "Connected. Checking installed mods...";
                     if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, false);
                     if (!IsStopped && UseReconnectHandshake)
                     {
@@ -97,6 +99,7 @@ namespace TimberNet
                         ReconnectToken = (string?)admission["ticket"];
                         RecoveryId = (string?)admission["recoveryId"]; RecoveryDigest = (string?)admission["digest"];
                     }
+                    ConnectionStatus = "Waiting for the host save...";
                     if (!IsStopped) StartListening(client, true);
                 }
                 catch (Exception error) { HandleConnectionFailure(client, error.Message); }

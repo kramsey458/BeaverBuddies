@@ -1,186 +1,143 @@
-﻿#if IS_STEAM
+#if IS_STEAM
 using Timberborn.SteamStoreSystem;
 #endif
-
 using BeaverBuddies.Connect;
+using BeaverBuddies.IO;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Timberborn.SingletonSystem;
-using UnityEngine;
 using Timberborn.SteamOverlaySystem;
 using Timberborn.CoreUI;
 
 namespace BeaverBuddies.Steam
 {
+    // Lobby membership survives a world reload, independently of native transport handles.
+    public static class SteamGuestLobby
+    {
+        public static CSteamID Current { get; private set; }
+        public static void Set(CSteamID lobby)
+        {
+            if (Current == lobby) return;
+            Leave(); Current = lobby;
+        }
+        public static void Leave()
+        {
+            if (Current.m_SteamID != 0) SteamMatchmaking.LeaveLobby(Current);
+            Current = default;
+        }
+        public static void Rejoin()
+        {
+            // Steam itself may have dropped lobby membership during a network outage.
+            // Rejoining the retained lobby is idempotent and needs no new invitation.
+            if (Current.m_SteamID != 0) SteamMatchmaking.JoinLobby(Current);
+        }
+    }
+
     class SteamOverlayConnectionService : IUpdatableSingleton
     {
-        public static bool IsSteamEnabled { get; private set; } = false;
-
+        public static bool IsSteamEnabled { get; private set; }
 #if IS_STEAM
-        private SteamManager _steamManager;
-        private ClientConnectionService _clientConnectionService;
-        private PanelStack _panelStack;
-        private SteamOverlayInputBlocker _inputBlocker;
-        private EventBus _eventBus;
-        private Settings _settings;
+        readonly SteamManager steam;
+        readonly ClientConnectionService connection;
+        readonly PanelStack panels;
+        readonly SteamOverlayInputBlocker overlay;
+        readonly DialogBoxShower dialogs;
+        readonly Settings settings;
+        static readonly List<IDisposable> callbacks = new List<IDisposable>();
+        static CSteamID pendingLobby;
+        static bool checkedLaunchInvite;
+        bool initialized, showProgress;
+        string pendingError;
+        double joinDeadline;
+        static double Now => (double)System.Diagnostics.Stopwatch.GetTimestamp() / System.Diagnostics.Stopwatch.Frequency;
 
-        private bool? _lastSuccess = null;
-
-        private static List<IDisposable> callbacks = new List<IDisposable>();
-
-        public SteamOverlayConnectionService(
-            SteamManager steamManager,
-            ClientConnectionService clientConnectionService,
-            SteamOverlayInputBlocker steamOverlayInputBlocker,
-            PanelStack panelStack,
-            EventBus eventBus,
-            Settings settings
-            )
+        public SteamOverlayConnectionService(SteamManager steamManager, ClientConnectionService clientConnectionService,
+            SteamOverlayInputBlocker steamOverlayInputBlocker, PanelStack panelStack, EventBus eventBus,
+            Settings settings, DialogBoxShower dialogBoxShower)
         {
-            _steamManager = steamManager;
-            _clientConnectionService = clientConnectionService;
-            _panelStack = panelStack;
-            _inputBlocker = steamOverlayInputBlocker;
-            _eventBus = eventBus;
-            _settings = settings;
+            steam = steamManager; connection = clientConnectionService; overlay = steamOverlayInputBlocker;
+            panels = panelStack; this.settings = settings; dialogs = dialogBoxShower;
         }
 
-        bool done = false;
         public void UpdateSingleton()
         {
-            //Read();
-            if (!done)
+            if (!initialized && steam.Initialized)
             {
-                if (_steamManager.Initialized)
+                IsSteamEnabled = true; initialized = true;
+                foreach (var callback in callbacks) callback.Dispose();
+                callbacks.Clear();
+                callbacks.Add(Callback<GameLobbyJoinRequested_t>.Create(OnInvite));
+                callbacks.Add(Callback<LobbyEnter_t>.Create(OnEntered));
+                SteamNetworkingUtils.InitRelayNetworkAccess();
+                if (Settings.PingDisplayName == Settings.DefaultPingPlayerName)
                 {
-                    IsSteamEnabled = true;
-
-                    foreach (var callback in callbacks)
-                    {
-                        callback.Dispose();
-                    }
-
-                    done = true;
-
-                    //Callback<LobbyCreated_t>.Create(OnLobbyCreated);
-                    //Callback<LobbyInvite_t>.Create(OnLobbyInvite);
-                    //Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
-                    callbacks.Add(Callback<GameLobbyJoinRequested_t>.Create(OnLobbyJoinRequested));
-                    callbacks.Add(Callback<LobbyEnter_t>.Create(OnLobbyEntered));
-                    callbacks.Add(Callback<P2PSessionRequest_t>.Create(OnP2PSessionRequest));
-
-                    //SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 4);
-
-                    TrySetPingName();
+                    string name = SteamFriends.GetFriendPersonaName(SteamUser.GetSteamID());
+                    if (!string.IsNullOrEmpty(name)) settings.PingPlayerName.SetValue(name);
                 }
-                else
+                if (!checkedLaunchInvite)
                 {
-                    Plugin.Log("Waiting on Steamworks to initialize...");
+                    checkedLaunchInvite = true;
+                    var args = Environment.GetCommandLineArgs();
+                    for (int i = 0; i + 1 < args.Length; i++)
+                        if (args[i] == "+connect_lobby" && ulong.TryParse(args[i + 1], out ulong id) && id != 0)
+                        { Join(new CSteamID(id)); break; }
                 }
             }
-            //ReceiveMessages();
-        }
-
-        private void TrySetPingName()
-        {
-            if (Settings.PingDisplayName != Settings.DefaultPingPlayerName) return;
-            try
+            if (pendingLobby.m_SteamID != 0 && joinDeadline != 0 && Now > joinDeadline)
+            { pendingLobby = default; joinDeadline = 0; pendingError = "Steam did not respond to the invite. Check Steam is online and ask your friend to invite you again."; }
+            if (panels.IsPanelOnTop(overlay)) return;
+            if (pendingError != null)
             {
-                string steamName = SteamFriends.GetFriendPersonaName(SteamUser.GetSteamID());
-                if (!string.IsNullOrEmpty(steamName))
-                {
-                    _settings.PingPlayerName.SetValue(steamName);
-                }
+                string error = pendingError; pendingError = null;
+                dialogs.Create().SetMessage(error).SetDefaultCancelButton().Show();
             }
-            catch (Exception)
+            if (showProgress) { showProgress = false; connection.ShowConnectionMessage(true); }
+        }
+
+        void OnInvite(GameLobbyJoinRequested_t invite) => Join(invite.m_steamIDLobby);
+
+        void Join(CSteamID lobby)
+        {
+            if (SnapshotResyncService.Active) return;
+            if (!EventIO.IsNull)
             {
+                pendingError = "You are already in a multiplayer session. Return to the main menu before accepting a different invite.";
+                return;
             }
+            if (!Settings.EnableSteam)
+            { pendingError = "Enable Steam Networking in BeaverBuddies settings, then accept the invite again."; return; }
+            if (pendingLobby == lobby) return;
+            pendingLobby = lobby; joinDeadline = Now + 30;
+            SteamMatchmaking.JoinLobby(lobby);
         }
 
-        private void OnLobbyJoinRequested(GameLobbyJoinRequested_t callback)
+        void OnEntered(LobbyEnter_t entered)
         {
-            string name = SteamFriends.GetFriendPersonaName(callback.m_steamIDFriend);
-            Debug.Log("User " + name + " has requested to join the lobby; joining...");
-            SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
-        }
-
-        private void OnLobbyChatUpdate(LobbyChatUpdate_t callback)
-        {
-            Debug.Log("Lobby chat update: " + callback.m_ulSteamIDLobby);
-            if ((callback.m_rgfChatMemberStateChange & (uint)EChatMemberStateChange.k_EChatMemberStateChangeEntered) != 0)
+            var lobby = new CSteamID(entered.m_ulSteamIDLobby);
+            // Ignore our own host lobby, duplicate responses, and superseded invite requests.
+            if (pendingLobby != lobby)
             {
-                CSteamID userJoined = new CSteamID(callback.m_ulSteamIDUserChanged);
-                string name = SteamFriends.GetFriendPersonaName(userJoined);
-                Debug.Log("User " + name + " has joined the lobby.");
-
-
-                //SteamNetworking.CreateP2PConnectionSocket(memberId, 0, )
-                string message = "Hello, beaver buddy!";
-                byte[] data = Encoding.UTF8.GetBytes(message);
-                SteamNetworking.SendP2PPacket(userJoined, data, (uint)data.Length, EP2PSend.k_EP2PSendReliable);
+                if (SteamMatchmaking.GetLobbyOwner(lobby) != SteamUser.GetSteamID() && SteamGuestLobby.Current != lobby)
+                    SteamMatchmaking.LeaveLobby(lobby);
+                return;
             }
-        }
-
-        private void OnLobbyInvite(LobbyInvite_t param)
-        {
-            string invitingUser = SteamFriends.GetFriendPersonaName(new CSteamID(param.m_ulSteamIDUser));
-            Plugin.Log($"Invited to lobby {param.m_ulSteamIDLobby} by {invitingUser}");
-        }
-
-        private void OnP2PSessionRequest(P2PSessionRequest_t callback)
-        {
-            CSteamID clientId = callback.m_steamIDRemote;
-            SteamNetworking.AcceptP2PSessionWithUser(clientId);
-        }
-
-        // This should only be called if the SteamOverlayInputBlocker is on top,
-        // so we can assume it was the panel that was just removed.
-        // If the game starts, it clears the stack silently, so this isn't shown
-        // (also this Singleton is disposed when the current scene ends).
-        [OnEvent]
-        public void OnPanelHidden(PanelHiddenEvent panelHiddenEvent)
-        {
-            if (!_lastSuccess.HasValue) return;
-            _clientConnectionService.ShowConnectionMessage(_lastSuccess.Value);
-            ClearWaitForSteamOverlay();
-        }
-
-        private void WaitForSteamOverlayToClose(bool success)
-        {
-            _lastSuccess = success;
-            _eventBus.Register(this);
-        }
-
-        private void ClearWaitForSteamOverlay()
-        {
-            _lastSuccess = null;
-            _eventBus.Unregister(this);
-
-        }
-
-
-        private void OnLobbyEntered(LobbyEnter_t callback)
-        {
-            ClearWaitForSteamOverlay();
-            var owner = SteamMatchmaking.GetLobbyOwner(new CSteamID(callback.m_ulSteamIDLobby));
-            if (owner != SteamUser.GetSteamID())
+            pendingLobby = default; joinDeadline = 0;
+            if (entered.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+            { pendingError = "The Steam lobby could not be joined. It may have closed or become full. Ask the host for a fresh invite."; return; }
+            if (SnapshotResyncService.Active || !EventIO.IsNull) { SteamMatchmaking.LeaveLobby(lobby); return; }
+            var owner = SteamMatchmaking.GetLobbyOwner(lobby);
+            if (owner.m_SteamID == 0 || SteamMatchmaking.GetLobbyData(lobby, "beaverbuddies_protocol") != SteamListener.Protocol)
             {
-                Plugin.Log("Joining another's lobby...");
-                bool success = _clientConnectionService.TryToConnect(owner);
-                if (_panelStack.IsPanelOnTop(_inputBlocker))
-                {
-                    WaitForSteamOverlayToClose(success);
-                }
-                else
-                {
-                    _clientConnectionService.ShowConnectionMessage(success);
-                }
+                SteamMatchmaking.LeaveLobby(lobby);
+                pendingError = "This Steam invite uses a different BeaverBuddies networking version. Install the same Preview 14 or newer build on both computers and restart Timberborn.";
+                return;
             }
+            SteamGuestLobby.Set(lobby);
+            showProgress = connection.TryToConnect(owner);
+            if (!showProgress) SteamGuestLobby.Leave();
         }
 #else
-        // Need to implement the interface
         public void UpdateSingleton() { }
 #endif
     }

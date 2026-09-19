@@ -27,7 +27,6 @@ namespace BeaverBuddies.IO
         {
             this.mapReceivedCallback = mapReceivedCallback;
 
-            TryRegisterSteamPacketReceiver(socket);
 
             NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity(), UseReconnectHandshake = true, ReconnectToken = reconnectToken };
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;

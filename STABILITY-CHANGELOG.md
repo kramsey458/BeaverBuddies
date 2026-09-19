@@ -10,6 +10,45 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## Preview 15 - 1.1.0-stability.15
+
+- Fix the startup localization exception present in Preview 13 and inherited by
+  Preview 14: remove four blank CSV records and restore the required Comment
+  column on both reconnect-grace entries. Preserve all existing localization
+  keys and text.
+- Include all Preview 14 Steam relay, invite, recovery and direct-IP changes.
+- Add checks for every shipped locale and all settings localization keys,
+  including regression fixtures for blank records and missing columns.
+- Check the fixed files using the validator decompiled from installed
+  Timberborn 1.1.2.4 with its actual LINQtoCSV library; the old Preview 13
+  English asset reproduces the failure.
+- Release Steam build and automated checks are required before packaging.
+  Live two-account Steam/Unity playtesting remains pending.
+
+## Preview 14 - 1.1.0-stability.14 (included in Preview 15)
+
+- Replace the deprecated Steam P2P transport with SteamNetworkingSockets and
+  Valve relay initialization. No Hamachi, shared IP or router forwarding is needed
+  for Steam invites. Keep the TCP direct-IP transport and mixed sessions.
+- Receive save and game data on transport workers during Unity stalls; use
+  native connection handles to isolate each reload. Remove the legacy per-frame
+  Steam packet router and fixed 128 KiB/s transfer limit.
+- Apply bounded native send backpressure off the game thread, release received
+  native message buffers, wake blocked reads/sends on close, and drain native
+  reliable buffers before restarting a host.
+- Retain Steam lobbies during snapshot recovery and admit original authenticated
+  Steam identities plus session tickets. Guests automatically reconnect to the
+  original Steam host; recovery also works when Steam lost lobby membership.
+- Start the 30-second admission countdown after the host scene loads. All
+  transports retain full-tick saves, snapshot verification, compatibility checks,
+  initialization barriers, cancellation and repeat-recovery protection.
+- Handle invite readiness, failed/expired/superseded lobby responses, mismatched
+  Steam protocols, startup lobby arguments and duplicate callbacks. Show connection
+  stages and save-download progress; cancel closes the attempt.
+- Fragment large compatibility profiles to respect transport message limits.
+- Add native-boundary Steam tests and real TCP/Steam-mixed transport checks.
+  Live two-account Steam validation is pending; see STEAM-INVITES.md.
+
 ## Preview 13 - 1.1.0-stability.13
 
 - Recover unexpected direct-IP disconnects by finishing the host tick, pausing,

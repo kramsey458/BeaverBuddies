@@ -1,6 +1,7 @@
 # Sending and snapshot recovery
 
-Preview 13 extends this flow to transport disconnects with a reconnect grace
+Preview 14 supports Steam invites, direct IP, and mixed sessions. Preview 13
+extended this flow to transport disconnects with a reconnect grace
 period. See [RECONNECT-GRACE.md](RECONNECT-GRACE.md) for its countdown, controls,
 and timeout behavior. The original desync recovery behavior is described below.
 
@@ -11,14 +12,13 @@ Settings enabled; disable duplicate BeaverBuddies installations.
 ## Player behavior
 
 **Automatic host snapshot recovery** is enabled by default in BeaverBuddies' mod
-settings. The host's setting controls it. It supports direct-IP connections,
-including sessions where Steam support is enabled but nobody joined by Steam invite.
-Steam invite sessions use the manual rehost fallback; automatically recreating
-their lobby is not part of this version. Queued sending benefits both transports.
+settings. The host's setting controls it. It supports direct-IP and Steam relay connections, including mixed sessions.
+Steam recovery retains the lobby and reconnects authenticated Steam identities
+using the same session-ticket and snapshot checks as direct IP.
 
 On a detected desync, guests pause and request a host snapshot. The host finishes
 its current simulation tick, waits for parallel work, saves, then reloads along
-with every guest. Guests reconnect to the original address and port automatically.
+with every guest. Guests reconnect to the original Steam host or IP address and port automatically.
 The host's saved state is authoritative. Commands pending in the discarded session
 are not replayed; a click made just before recovery may need repeating.
 
@@ -87,7 +87,7 @@ sessions that transfer commands and reload a new snapshot on the same port.
 `SnapshotChecks` compiles the production recovery coordinator unchanged against
 controlled scene/save/UI boundaries. It exercises readiness, save/flush failures,
 timeouts, stale IDs, duplicate messages, canceled sessions, SHA-256 rejection,
-repeat-desync protection and Steam/manual fallback.
+repeat-desync protection. Steam recovery coverage is described in STEAM-INVITES.md.
 
 The existing `RuntimeChecks` suite loads the compiled mod and installed game
 assemblies. New checks exercise actual compiled action/tick guards and prevention

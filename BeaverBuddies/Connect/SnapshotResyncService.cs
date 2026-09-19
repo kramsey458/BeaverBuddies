@@ -105,7 +105,7 @@ namespace BeaverBuddies.Connect
                 return;
             }
             if (!Settings.ReconnectGraceEnabled || !Settings.SnapshotResyncEnabled || !ReplayService.IsLoaded ||
-                !ReplayService.CompatibilityReady || !(peer is TCPClientWrapper) || server.HasSteamClients) return;
+                !ReplayService.CompatibilityReady) return;
             current.BeginHost(server, Replay, true);
         }
 
@@ -113,7 +113,7 @@ namespace BeaverBuddies.Connect
         {
             if (current == null || Active || ReplayService.HasReplayFailure || !ReplayService.IsLoaded ||
                 !ReplayService.CompatibilityReady || !Settings.ReconnectGraceEnabled ||
-                network?.TransportName != "Direct IP" || string.IsNullOrEmpty(network.ReconnectToken) || client != EventIO.Get()) return false;
+                network == null || string.IsNullOrEmpty(network.ReconnectToken) || client != EventIO.Get()) return false;
             RollingDiagnosticsService.Trigger("connection lost; requesting snapshot reconnect");
             recovery = new Recovery { Owner = client, Phase = Phase.Connecting, ConnectionRecovery = true, Deadline = Now + 120 };
             Replay?.FreezeForSnapshot();
@@ -153,8 +153,7 @@ namespace BeaverBuddies.Connect
             var prepare = Message("ResyncPrepare", recovery.Id);
             prepare["connectionRecovery"] = connectionLoss;
             server.NetBase.SendControl(prepare);
-            string disabledReason = server.HasSteamClients ? "Automatic snapshot recovery currently supports direct-IP connections. This session includes a Steam invite connection; rehost manually to recreate its lobby."
-                : !Settings.SnapshotResyncEnabled ? "Automatic snapshot recovery is disabled by the host."
+            string disabledReason = !Settings.SnapshotResyncEnabled ? "Automatic snapshot recovery is disabled by the host."
                 : Now - lastRecovery < 120 ? "Another interruption occurred within two minutes of recovery. Automatic reloads have stopped to avoid a reload loop." : null;
             if (disabledReason == null) lastRecovery = Now;
             WaterDiagnostics.WriteOnDesync();
@@ -254,8 +253,16 @@ namespace BeaverBuddies.Connect
             // Frozen ReplayService no longer pumps IO. Recovery controls still must be delivered.
             EventIO.Get()?.Update();
             if (recovery != state || state.Phase == Phase.Failed) return;
+            // Unity can stop dispatching Steam callbacks while the host scene loads.
+            // Give guests the full admission window after those callbacks resume.
             if (state.Phase == Phase.HostLoading && state.ConnectionRecovery && !state.RosterClosed &&
-                Now >= state.ReconnectDeadline) CloseReconnectWindow(state);
+                state.ReconnectDeadline == 0 && ReplayService.IsLoaded)
+            {
+                state.ReconnectDeadline = Now + 30;
+                ((ServerEventIO)state.Owner).NetBase.ReconnectTickets?.SetDeadline(state.ReconnectDeadline);
+            }
+            if (state.Phase == Phase.HostLoading && state.ConnectionRecovery && !state.RosterClosed &&
+                state.ReconnectDeadline != 0 && Now >= state.ReconnectDeadline) CloseReconnectWindow(state);
             if (Now > state.Deadline) { Fail("Snapshot recovery timed out waiting for the host or another player."); return; }
             if (ReplayService.IsLoaded && state.Phase != Phase.FinishingTick)
                 SnapshotResyncStatus.Show(dialogs, Status(state), () =>
@@ -290,13 +297,14 @@ namespace BeaverBuddies.Connect
                 {
                     if (state.Drain.IsCanceled || state.Drain.IsFaulted) { Fail("A player could not receive the recovery notice."); return; }
                     SnapshotResyncStatus.Hide();
+                    ulong steamLobby = ((ServerEventIO)state.Owner).DetachSteamLobby();
+                    ulong[] steamPeers = ((ServerEventIO)state.Owner).ExportSteamPeers();
                     var host = new ServerEventIO();
                     EventIO.Set(host); // closes old connections before listening on the same port
                     state.Owner = host; state.Phase = Phase.HostLoading;
                     state.Deadline = Now + 600;
-                    host.Start(state.Bytes, state.Tickets == null ? null : new ReconnectTickets(state.Tickets, state.Id, state.Digest));
-                    state.ReconnectDeadline = Now + 30;
-                    if (state.ConnectionRecovery) host.NetBase.ReconnectTickets?.SetDeadline(state.ReconnectDeadline);
+                    host.Start(state.Bytes, state.Tickets == null ? null : new ReconnectTickets(state.Tickets, state.Id, state.Digest), steamLobby, steamPeers);
+                    state.ReconnectDeadline = 0;
                     if (host.NetBase == null || host.NetBase.IsStopped) throw new InvalidOperationException("Could not restart hosting.");
                     SingletonManager.Reset();
                     DeterminismService.InitGameStartState(state.Bytes);
@@ -332,6 +340,8 @@ namespace BeaverBuddies.Connect
                 case Phase.Saving: return "Recovering multiplayer: saving the host snapshot...";
                 case Phase.Draining: return "Recovering multiplayer: notifying players to reload...";
                 case Phase.HostLoading:
+                    if (state.ConnectionRecovery && !state.RosterClosed && state.ReconnectDeadline == 0)
+                        return "Recovering multiplayer: loading the host snapshot. The reconnect window starts once the host has loaded.";
                     if (state.ConnectionRecovery && !state.RosterClosed)
                         return $"Connection interrupted. Reconnecting: {((ServerEventIO)state.Owner).NetBase.ReconnectTickets?.ConnectedCount ?? 0}/{state.Expected} players.\n{Math.Max(0, (int)Math.Ceiling(state.ReconnectDeadline - Now))} seconds left to reconnect.\nConnected players get additional time to load the shared snapshot.";
                     return $"Recovering multiplayer: waiting for players to finish loading ({state.Ready.Count}/{state.Expected})...";
@@ -372,7 +382,7 @@ namespace BeaverBuddies.Connect
                     bool isHost = EventIO.Get() is ServerEventIO;
                     if (isHost && Replay != null)
                         Replay.FinishTickForSnapshot(() => { recovery = null; rehosting.RehostGame(); });
-                    else { recovery = null; connection.ConnectOrShowFailureMessage(); }
+                    else { recovery = null; connection.ReconnectOriginal(); }
                 }, EventIO.Get() is ServerEventIO ? "Rehost manually" : "Reconnect")
                 .SetDefaultCancelButton().Show();
         }
