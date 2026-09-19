@@ -5,7 +5,10 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
-## Unreleased
+## 1.0.1 (pre-release)
+
+A pre-release for testing. Every player must install this build; it will not join a session with
+1.0.0.
 
 ### Performance
 
@@ -208,7 +211,7 @@ The first official release of this fork. See `STEAM-INVITES.md`, `CONNECTION-PAN
 
 1. Fully close Timberborn on every computer.
 2. Download `BeaverBuddies-stability-1.0.0.zip` from the
-   [latest release](https://github.com/kramsey458/BeaverBuddies-Multiplayer-Stability-Fork/releases/latest),
+   [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest),
    extract it, and copy the `BeaverBuddies-StabilityPreview` folder into
    `Documents/Timberborn/Mods`, replacing any earlier copy.
 3. Make sure **Harmony** and **Mod Settings** are enabled, then enable **BeaverBuddies -
