@@ -8,9 +8,9 @@
   <ItemGroup>
     <ProjectReference Include="$(SourceRoot)/TimberNet/TimberNet.csproj" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/ReplayExecution.cs" Link="ReplayExecution.cs" />
-    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamSocket.cs" Link="SteamSocket.cs" />
-    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamPacketListener.cs" Link="SteamPacketListener.cs" />
-    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/ISteamPacketReceiver.cs" Link="ISteamPacketReceiver.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamLinkTypes.cs" Link="SteamLinkTypes.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamLinkSocket.cs" Link="SteamLinkSocket.cs" />
+    <Compile Include="$(SourceRoot)/BeaverBuddies/Steam/SteamLinkManager.cs" Link="SteamLinkManager.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Fixes/AnimationFixes.cs" Link="AnimationFixes.cs" />
     <Compile Include="$(SourceRoot)/BeaverBuddies/Activity/PlayerCursorPreferences.cs" Link="PlayerCursorPreferences.cs" />
   </ItemGroup>

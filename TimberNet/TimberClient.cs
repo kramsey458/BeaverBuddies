@@ -34,9 +34,14 @@ namespace TimberNet
             SendEvent(client, message);
         }
 
+        // Long enough for a relayed connection to be established, but bounded.
+        private const int BackgroundConnectTimeoutMilliseconds = 45000;
+
         protected override void HandleConnectionFailure(ISocketStream stream, string message)
         {
             if (IsStopped || Interlocked.Exchange(ref connectionFailed, 1) != 0) return;
+            // Capture the reason first: Close() tears the stream down.
+            message = DescribeFailure(stream, message);
             Close();
             QueueError(message);
         }
@@ -76,6 +81,8 @@ namespace TimberNet
             {
                 try
                 {
+                    // Transports that connect in the background finish before the handshake clock starts.
+                    (client as IConnectionAwaitable)?.WaitForConnection(BackgroundConnectTimeoutMilliseconds);
                     if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, false);
                     if (!IsStopped) StartListening(client, true);
                 }

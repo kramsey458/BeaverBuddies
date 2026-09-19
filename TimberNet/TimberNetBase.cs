@@ -258,9 +258,18 @@ namespace TimberNet
 
         protected virtual void HandleConnectionFailure(ISocketStream stream, string message)
         {
+            // Read the reason before closing: closing may replace it with a generic one.
+            message = DescribeFailure(stream, message);
             // After a partial write the framing cannot safely be reused.
             stream.Close();
             Log(message);
+        }
+
+        /// <summary>Adds the transport's own explanation (for example Steam's end reason), if it has one.</summary>
+        protected static string DescribeFailure(ISocketStream stream, string message)
+        {
+            string? reason = (stream as IFailureDescriber)?.FailureReason;
+            return string.IsNullOrEmpty(reason) || message.Contains(reason) ? message : message + "\n" + reason;
         }
 
         protected void QueueError(string message) => errorQueue.Enqueue(message);
