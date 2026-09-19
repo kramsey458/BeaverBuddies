@@ -5,6 +5,44 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
+## 1.0.6 (pre-release)
+
+A pre-release for testing, on top of 1.0.5. Every player should install this build.
+
+### A failing message handler can no longer crash the game
+
+1.0.5 fixed the one handler that crashed a guest's game in 1.0.4. The way it got there was still
+open: the network layer's `Update` called its `OnError`, `OnSessionFault` and `OnMapReceived`
+subscribers unprotected, from the game's update loop, and they show dialogs and load scenes. An
+exception in any of them was an uncaught exception, which is the game's crash screen.
+
+- `TimberNetBase` now calls every subscriber by itself inside a `try`. One that throws is written
+  to `Player.log` and the others still run.
+- If loading the save received from the host fails, the guest is told ("The save from the host
+  arrived but could not be loaded") instead of being left in the menu with no explanation.
+- The join messages reached from Steam callbacks (`ShowJoinError`, `ShowConnectionMessage`) are
+  guarded the same way: a message that cannot be shown is logged.
+
+### The host waits for a guest that is very far behind
+
+Easing off (1.0.4) stops at 30% of the chosen speed. With the large colony speed limit removed,
+30% of speed 7 is still about 3.5 ticks a second, so a guest that has stopped altogether (a long
+save, a long garbage collection, a stalled connection) keeps falling behind while the host queues
+events for it. Left long enough, that fills Steam's send buffer, and a full buffer that makes
+no progress for 30 seconds ends the connection.
+
+- When the slowest guest is more than **60 ticks** behind (about five seconds at a true speed 7)
+  the host stands still, at any speed, until that guest is within **10 ticks**, then carries on.
+- Waiting does not change the easing percentage: one stall says nothing about what a computer
+  can sustain. A guest that leaves, or whose connection times out, releases the host at once.
+- The connection panel shows the host **waiting for a guest to catch up** while it applies, and
+  both changes are written to `Player.log`.
+- In the test model a guest frozen for 30 seconds is never more than about 60 ticks behind,
+  and full speed returns afterwards.
+
+This changes how fast the host works through ticks, never which tick anything happens on, so
+it cannot change what anyone simulates.
+
 ## 1.0.5 (pre-release)
 
 A pre-release for testing, on top of 1.0.4. Every player should install this build.

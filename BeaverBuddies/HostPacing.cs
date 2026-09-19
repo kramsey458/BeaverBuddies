@@ -19,8 +19,15 @@ namespace BeaverBuddies
     //  Dropping faster than climbing settles just below what the slowest computer can do, then keeps probing
     //  upwards, so a guest that was only slow for a while gets full speed back.
     //
+    //  - Easing has a floor, and with the large colony speed limit removed 30% of speed 7 is still about 3.5
+    //    ticks a second. A guest that has stopped altogether (a long save, a long collection, a stalled
+    //    connection) keeps falling behind at that rate while the host queues events for it, until Steam's send
+    //    buffer fills and the connection is dropped. So beyond StopTicks the host holds still until the guest
+    //    is back within ResumeTicks. Holding does not move the easing percentage: a single stall says nothing
+    //    about what the guest can sustain.
+    //
     // This changes how fast the host works through ticks, never which tick anything happens on, so it cannot
-    // change what anyone simulates. Speed 1 and a paused game are never eased.
+    // change what anyone simulates. Speed 1 and a paused game are never eased; the hold applies at every speed.
     public sealed class HostPacing
     {
         public const int HighTicks = 15;
@@ -28,6 +35,9 @@ namespace BeaverBuddies
         public const int DownStepPercent = 15;
         public const int UpStepPercent = 5;
         public const int MinPercent = 30;
+        // About five seconds of ticks at a true speed 7.
+        public const int StopTicks = 60;
+        public const int ResumeTicks = 10;
         private const int SamplesBeforeFirstDrop = 4;
         private const int SamplesBeforeNextDrop = 2;
 
@@ -39,6 +49,9 @@ namespace BeaverBuddies
 
         public bool IsEasing => Percent < 100;
 
+        // True while the host holds still for a guest that is very far behind.
+        public bool IsHolding { get; private set; }
+
         // One status sample. worstGuestTicksBehind is null when no guest has reported a tick.
         public void Sample(int? worstGuestTicksBehind, bool running)
         {
@@ -46,10 +59,13 @@ namespace BeaverBuddies
             {
                 // Nobody to wait for.
                 Percent = 100;
+                IsHolding = false;
                 _previousBehind = -1;
                 _samplesNotGaining = 0;
                 return;
             }
+            if (worstGuestTicksBehind.Value > StopTicks) IsHolding = true;
+            else if (worstGuestTicksBehind.Value <= ResumeTicks) IsHolding = false;
             if (!running)
             {
                 // Paused: the guest catches up on its own, and lag while paused says nothing about its speed.
@@ -58,6 +74,13 @@ namespace BeaverBuddies
                 return;
             }
             int behind = worstGuestTicksBehind.Value;
+            if (IsHolding)
+            {
+                // The lag now only says how fast the guest catches up with a host that is standing still.
+                _previousBehind = -1;
+                _samplesNotGaining = 0;
+                return;
+            }
             if (behind > HighTicks)
             {
                 bool gaining = _previousBehind >= 0 && behind < _previousBehind;
@@ -82,6 +105,10 @@ namespace BeaverBuddies
         // The speed the host should actually run at for the speed the players chose.
         public float Apply(float targetSpeed)
         {
+            if (IsHolding)
+            {
+                return 0;
+            }
             if (Percent >= 100 || targetSpeed <= 1)
             {
                 return targetSpeed;

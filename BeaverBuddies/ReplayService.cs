@@ -511,6 +511,9 @@ namespace BeaverBuddies
         /// <summary>How much of the chosen speed the host is running at, in percent. 100 unless it is easing off for a guest.</summary>
         public int HostPacingPercent => hostPacing.Percent;
 
+        /// <summary>True while the host stands still because a guest is very far behind.</summary>
+        public bool HostPacingHolding => hostPacing.IsHolding;
+
         // Guests report their tick about once a second, so sampling more often would count the same report twice.
         private void SampleHostPacing(ServerEventIO host)
         {
@@ -518,7 +521,14 @@ namespace BeaverBuddies
             if (now < nextHostPacingSampleMs) return;
             nextHostPacingSampleMs = now + TimberNet.TimberServer.StatusIntervalMs;
             int before = hostPacing.Percent;
+            bool wasHolding = hostPacing.IsHolding;
             hostPacing.Sample(host.NetBase?.WorstGuestTicksBehind, TargetSpeed > 0);
+            if (hostPacing.IsHolding != wasHolding)
+            {
+                Plugin.Log(hostPacing.IsHolding
+                    ? $"Host pacing: waiting for a guest that is {host.NetBase?.WorstGuestTicksBehind} ticks behind"
+                    : "Host pacing: the guest has caught up, carrying on");
+            }
             if (hostPacing.Percent != before)
             {
                 Plugin.Log($"Host pacing: now {hostPacing.Percent}% of the chosen speed " +

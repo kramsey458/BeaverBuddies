@@ -76,7 +76,7 @@ static class HostPacingChecks
         yield return ("Pacing: never below the floor, never eases speed 1 or below", () =>
         {
             var pacing = new HostPacing();
-            for (int i = 0; i < 100; i++) pacing.Sample(500 + i, true);
+            for (int i = 0; i < 100; i++) pacing.Sample(50, true);   // far behind, never gaining, but short of the hold
             Equal(HostPacing.MinPercent, pacing.Percent);
             Equal(1f, pacing.Apply(1)); Equal(0f, pacing.Apply(0)); Equal(0.5f, pacing.Apply(0.5f));
             Check(Math.Abs(pacing.Apply(7) - 2.1f) < .001f, "speed 7 at the floor");
@@ -101,6 +101,26 @@ static class HostPacingChecks
             Equal(85, pacing.Percent);
             pacing.Sample(61, true); pacing.Sample(62, true); Equal(85, pacing.Percent);   // comparison restarts after a pause
             pacing.Sample(null, true); Equal(100, pacing.Percent);   // every guest left
+        });
+        yield return ("Hold: the host stands still for a guest more than 60 ticks behind, until it is within 10", () =>
+        {
+            var pacing = new HostPacing();
+            pacing.Sample(60, true); Check(!pacing.IsHolding); Equal(7f, pacing.Apply(7));
+            pacing.Sample(61, true); Check(pacing.IsHolding); Equal(0f, pacing.Apply(7));
+            Equal(0f, pacing.Apply(1));                       // at every speed, unlike easing
+            foreach (int behind in new[] { 61, 61, 61, 61, 61, 40, 11 }) { pacing.Sample(behind, true); Check(pacing.IsHolding); }
+            Equal(100, pacing.Percent);                       // a stall says nothing about what the guest can sustain
+            pacing.Sample(10, true); Check(!pacing.IsHolding); Equal(7f, pacing.Apply(7));
+            // Released while paused too, and at once when the guest leaves, so the host can never wait for nobody.
+            pacing.Sample(90, true); pacing.Sample(3, false); Check(!pacing.IsHolding);
+            pacing.Sample(90, true); pacing.Sample(null, true); Check(!pacing.IsHolding); Equal(7f, pacing.Apply(7));
+        });
+        yield return ("Hold model: a guest frozen for 30 s is never more than about 60 ticks behind, and play resumes", () =>
+        {
+            var held = Simulate(guestTicksPerSecond: _ => 17, hitchEverySeconds: 0, oneStallAtSeconds: 20, stallSeconds: 30);
+            Check(held.WorstBehindOverall <= HostPacing.StopTicks + 12, $"worst lag {held.WorstBehindOverall}");
+            Check(held.FinalBehind <= CatchUpSpeed.BufferTicks + 1 && held.FinalPercent == 100, $"behind {held.FinalBehind}, {held.FinalPercent}%");
+            Check(held.HostTicksPerSecondLateOn > 11, $"host at {held.HostTicksPerSecondLateOn:0.0} ticks/s afterwards");
         });
         yield return ("Pacing model: a fast guest with hitches never slows the host", () =>
         {
@@ -177,6 +197,9 @@ static class HostPacingChecks
             Equal("BeaverBuddies.Panel.TicksMany:22", model.GuestsBehindText); Check(model.PacingText == null);
             input.HostPacingPercent = 70;
             Equal("BeaverBuddies.Panel.PacingValue:70", PanelModelBuilder.Build(input, T).PacingText);
+            input.HostPacingHolding = true;
+            Equal("BeaverBuddies.Panel.PacingHolding", PanelModelBuilder.Build(input, T).PacingText);
+            input.HostPacingHolding = false;
             // A guest sees neither, and a guest on an older build reports no lag.
             var guestView = new PanelInputs { IsHost = false, HostPacingPercent = 70 };
             guestView.Players.Add(new PanelPlayer { Id = 1, Name = "A", IsYou = true, TicksBehind = 9 });
@@ -189,14 +212,14 @@ static class HostPacingChecks
 
     // Host and one guest, 60 frames a second, speed 7. The guest runs the real catch-up rule but cannot exceed
     // what its computer manages. The host samples the guest's lag once a second, as the status feed does.
-    static (int LowestPercent, int FinalPercent, int FinalBehind, int WorstBehindLateOn, double HostTicksPerSecondLateOn) Simulate(
+    static (int LowestPercent, int FinalPercent, int FinalBehind, int WorstBehindLateOn, double HostTicksPerSecondLateOn, int WorstBehindOverall) Simulate(
         Func<double, double> guestTicksPerSecond, double hitchEverySeconds, bool easing = true,
         double oneStallAtSeconds = -1, double stallSeconds = 0, double totalSeconds = 180)
     {
         const double frame = 1 / 60.0, secondsPerTick = .6; const float target = 7;
         var pacing = new HostPacing();
         double hostTicks = 0, guestTicks = 0, nextSample = 1, nextHitch = hitchEverySeconds > 0 ? hitchEverySeconds : double.MaxValue, stalledUntil = -1;
-        float guestSpeed = target; int lowest = 100, worstLate = 0; double hostTicksAtHalf = 0;
+        float guestSpeed = target; int lowest = 100, worstLate = 0, worstOverall = 0; double hostTicksAtHalf = 0;
         for (double time = 0; time < totalSeconds; time += frame)
         {
             if (Math.Abs(time - totalSeconds / 2) < frame / 2) hostTicksAtHalf = hostTicks;
@@ -209,8 +232,9 @@ static class HostPacingChecks
             guestSpeed = CatchUpSpeed.For(target, behind, guestSpeed);
             if (time >= nextSample) { nextSample += 1; pacing.Sample(behind, true); lowest = Math.Min(lowest, pacing.Percent); }
             if (time > totalSeconds / 2) worstLate = Math.Max(worstLate, behind);
+            worstOverall = Math.Max(worstOverall, behind);
         }
-        return (lowest, pacing.Percent, (int)hostTicks - (int)guestTicks, worstLate, (hostTicks - hostTicksAtHalf) / (totalSeconds / 2));
+        return (lowest, pacing.Percent, (int)hostTicks - (int)guestTicks, worstLate, (hostTicks - hostTicksAtHalf) / (totalSeconds / 2), worstOverall);
     }
 
     sealed class QueueListener : ISocketListener
