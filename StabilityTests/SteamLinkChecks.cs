@@ -250,6 +250,29 @@ static class SteamLinkChecks
 
     public static IEnumerable<(string Name, Action Run)> Tests()
     {
+        yield return ("Receiving always asks Steam for exactly one full buffer, whatever is waiting", () =>
+        {
+            // Steamworks.NET throws when the requested count differs from the buffer length. 1.0.4 asked for
+            // "what is left of the limit", which broke with 193 to 255 messages waiting (a guest after a long load).
+            foreach (int waiting in new[] { 0, 1, 63, 64, 65, 192, 193, 250, 255, 256, 257, 1000 })
+            {
+                int left = waiting, handled = 0;
+                int total = ReceiveBatching.Drain(64, 256, requested =>
+                {
+                    if (requested != 64) throw new ArgumentException("ppOutMessages must be the same size as nMaxMessages!");
+                    int count = Math.Min(left, requested);
+                    left -= count;
+                    return count;
+                }, _ => handled++);
+                Equal(Math.Min(waiting, 256), total);
+                Equal(total, handled);
+            }
+            // Partial batches (messages still arriving) may overshoot the soft limit by less than one buffer.
+            int calls = 0;
+            Equal(300, ReceiveBatching.Drain(64, 256, requested => { Equal(64, requested); calls++; return 50; }, _ => { }));
+            Equal(6, calls);
+            Equal(-1, ReceiveBatching.Drain(64, 256, _ => -1, _ => { }));
+        });
         yield return ("Steam link connects in the background without blocking the caller", () =>
         {
             using var rig = new Rig();
