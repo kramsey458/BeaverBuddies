@@ -80,13 +80,13 @@
         </li>
         <li>
           <h3>Extract and copy</h3>
-          <p>Extract the zip and copy the <code>BeaverBuddies-StabilityPreview</code> folder into your Timberborn <code>Mods</code> folder:</p>
+          <p>Extract the zip and copy the <code>BeaverBuddies-Stability-Fork</code> folder into your Timberborn <code>Mods</code> folder:</p>
           <div class="path"><code>Documents\Timberborn\Mods</code><button class="copy" type="button">Copy</button></div>
-          <p>You should end up with <code>Mods\BeaverBuddies-StabilityPreview\version-1.1\manifest.json</code>. If you already have an older copy, replace it.</p>
+          <p>You should end up with <code>Mods\BeaverBuddies-Stability-Fork\version-1.1\manifest.json</code>. If you already have a <code>BeaverBuddies-Stability-Fork</code> folder, replace it.</p>
         </li>
         <li>
           <h3>Keep only one BeaverBuddies</h3>
-          <p>Unsubscribe from or remove the Workshop BeaverBuddies and any other copy. They share the same mod ID and will conflict.</p>
+          <p>Unsubscribe from or remove the Workshop BeaverBuddies and any other copy, including an old <code>BeaverBuddies-StabilityPreview</code> folder from an earlier download. They share the same mod ID and will conflict.</p>
         </li>
         <li>
           <h3>Start Timberborn and enable the mods</h3>
@@ -97,9 +97,9 @@
           <p>Everyone needs the same zip, then a full restart of the game.</p>
         </li>
       </ol>
-      <div class="callout tip">
-        <strong class="label">Why is the folder called "StabilityPreview"?</strong>
-        <p>It keeps its original name on purpose, so an update replaces the old copy instead of sitting next to it. Two folders with the same mod ID would conflict.</p>
+      <div class="callout warn">
+        <strong class="label">Updating from an earlier download?</strong>
+        <p>Earlier downloads used a folder named <code>BeaverBuddies-StabilityPreview</code>. Delete it from <code>Mods</code> before you copy in the new folder. The two share a mod ID, so having both would conflict.</p>
       </div>
       <p>To check the download, open PowerShell in the folder you saved it to and compare the result with <code>1.0.1-SHA256SUMS.txt</code>:</p>
       <pre><code>Get-FileHash .\BeaverBuddies-stability-1.0.1.zip -Algorithm SHA256</code></pre>
@@ -187,8 +187,8 @@
     <section id="update">
       <h2>Update or remove</h2>
       <ul>
-        <li><b>Update:</b> download the new zip, close the game, and replace the <code>BeaverBuddies-StabilityPreview</code> folder. Everyone updates together, because different builds will not join each other.</li>
-        <li><b>Remove:</b> disable the mod in the mod manager, or delete the <code>BeaverBuddies-StabilityPreview</code> folder from <code>Mods</code>.</li>
+        <li><b>Update:</b> download the new zip, close the game, and replace the <code>BeaverBuddies-Stability-Fork</code> folder. Everyone updates together, because different builds will not join each other.</li>
+        <li><b>Remove:</b> disable the mod in the mod manager, or delete the <code>BeaverBuddies-Stability-Fork</code> folder from <code>Mods</code>.</li>
       </ul>
     </section>
 

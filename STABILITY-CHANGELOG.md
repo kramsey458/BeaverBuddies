@@ -27,6 +27,12 @@ Every player must install this build; it will not join a session with 1.0.0.
 - The "Client trying to tick before receiving Heartbeat" warning is logged once per tick instead
   of on every check.
 
+### Install folder
+
+- The install folder inside the download is now `BeaverBuddies-Stability-Fork` (it was `BeaverBuddies-StabilityPreview`). If you
+  installed an earlier download, delete the old folder before copying in the new one, because both
+  share a mod ID and would conflict.
+
 ### Validation
 
 - Release Steam and non-Steam builds succeed with no warnings. 87 StabilityTests, 59 RuntimeChecks
@@ -211,8 +217,9 @@ The first official release of this fork. See `STEAM-INVITES.md`, `CONNECTION-PAN
 1. Fully close Timberborn on every computer.
 2. Download `BeaverBuddies-stability-1.0.1.zip` from the
    [latest release](https://github.com/kramsey458/BeaverBuddies-Stability-Fork/releases/latest),
-   extract it, and copy the `BeaverBuddies-StabilityPreview` folder into
-   `Documents/Timberborn/Mods`, replacing any earlier copy.
+   extract it, and copy the `BeaverBuddies-Stability-Fork` folder into
+   `Documents/Timberborn/Mods`. If you installed an earlier download, delete its old
+   `BeaverBuddies-StabilityPreview` folder first: the two share a mod ID and would conflict.
 3. Make sure **Harmony** and **Mod Settings** are enabled, then enable **BeaverBuddies -
    Stability Fork**, version **1.0.1**, on every computer. Disable the Workshop
    BeaverBuddies and any duplicate local copies: they share one mod ID.
