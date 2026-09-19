@@ -5,6 +5,42 @@ Every change this fork makes relative to the original BeaverBuddies `v1.1` branc
 1.1.2.4. For a plain-language summary, see the [README](README.md). Future releases add a new
 entry above the current one.
 
+## 1.0.2 (pre-release)
+
+A pre-release for testing. Every player should install this build: the game warns when mod
+versions differ, and mixed versions are untested.
+
+### Performance
+
+- A guest now catches up to the host before it falls far behind at high game speeds. The original
+  rule sped a guest up only once it was more ticks behind than the game speed: more than 1 tick at
+  speed 1, but more than 7 ticks at speed 7. Both players run at the same nominal speed, so every
+  hitch on the guest added lag that nothing recovered until it passed that mark, and at speed 7 a
+  guest sat 3 to 5 ticks behind (about 0.3 to 0.4 s before it saw the result of its own actions, on
+  top of the network delay). A guest now starts catching up once it is more than 2 ticks behind,
+  whatever the game speed, and continues until it is within 1. It aims for a small buffer and not
+  zero, because a guest with nothing queued has to wait for the host's heartbeat before every tick.
+- This only changes how quickly a player works through ticks it has already received. The host
+  still decides which tick every event runs on, so it cannot change what any player simulates. The
+  host is unaffected (it is never behind), a paused game keeps the original rule exactly, and a
+  guest is never slower to catch up than before. The 10x cap is unchanged.
+- The catch-up speed changes less often than before. Every speed change notifies each animated
+  building, and "ticks behind" naturally flickers by one as the host's tick arrives and the guest's
+  finishes, so the original rule changed speed on almost every tick once it was active. Within one
+  catch-up the speed now only rises, then drops back once. In the test model of a guest that loses
+  0.3 s every 5 s at speed 7, average lag falls from 7.6 to 2.2 ticks and speed changes from 1174 to
+  92 over two minutes; at speed 3, from 3.3 to 1.9 ticks and from 530 to 62; speed 1 is unchanged.
+- If a guest's computer cannot sustain the chosen speed at all, no catch-up rule helps: compare the
+  tick rate in the connection panel on both computers (about 11.7 per second at speed 7).
+
+### Validation
+
+- Release Steam build succeeds with no warnings. 59 RuntimeChecks pass against the built mod.
+- 97 StabilityTests pass, ten of them new (`CatchUpSpeedChecks`): exact behaviour at each speed,
+  never slower than the original rule, the paused case, the host case, and the hitching-guest
+  model above. The rule is a pure function (`BeaverBuddies/CatchUpSpeed.cs`) linked into the tests.
+- Not yet played in a multiplayer session.
+
 ## 1.0.1
 
 Every player must install this build; it will not join a session with 1.0.0.

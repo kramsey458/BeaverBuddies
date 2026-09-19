@@ -519,16 +519,8 @@ namespace BeaverBuddies
                 return;
             }
 
-            // If we're not out of ticks to process, check if we're behind
-            float targetSpeed = TargetSpeed;
-            int ticksBehind = io.TicksBehind;
-
-            // If we're behind, speed up to match.
-            if (ticksBehind > targetSpeed)
-            {
-                targetSpeed = Math.Min(ticksBehind, 10);
-                //Plugin.Log($"Upping target speed to: {targetSpeed}");
-            }
+            // If we're not out of ticks to process, speed up while we're behind.
+            float targetSpeed = CatchUpSpeed.For(TargetSpeed, io.TicksBehind, _speedManager.CurrentSpeed);
 
             if (_speedManager.CurrentSpeed != targetSpeed)
             {
