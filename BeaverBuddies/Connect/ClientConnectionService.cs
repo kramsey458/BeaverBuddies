@@ -139,21 +139,32 @@ namespace BeaverBuddies.Connect
         /// <summary>Shows the standard "could not join" dialog with a specific reason.</summary>
         public void ShowJoinError(string reasonKey, string details = null)
         {
-            ShowError(reasonKey, details);
+            ShowSafely(() => ShowError(reasonKey, details));
+        }
+
+        // These are reached from Steam callbacks, which do not care which scene is loaded. A message that
+        // cannot be shown is logged; it must never take the game down with it.
+        private static void ShowSafely(Action show)
+        {
+            try { show(); }
+            catch (Exception error) { Plugin.LogWarning("Could not show a multiplayer message: " + error.Message); }
         }
 
         public void ShowConnectionMessage(bool success)
         {
-            if (success)
+            ShowSafely(() =>
             {
-                _dialogBoxShower.Create()
-                    .SetLocalizedMessage("BeaverBuddies.JoinCoopGame.Success")
-                    .Show();
-            }
-            else
-            {
-                ShowError("BeaverBuddies.JoinCoopGame.ConnectionFailedMessage");
-            }
+                if (success)
+                {
+                    _dialogBoxShower.Create()
+                        .SetLocalizedMessage("BeaverBuddies.JoinCoopGame.Success")
+                        .Show();
+                }
+                else
+                {
+                    ShowError("BeaverBuddies.JoinCoopGame.ConnectionFailedMessage");
+                }
+            });
         }
 
         private static void ShowErrorInGame(string error)

@@ -256,6 +256,30 @@ static class ModWarningChecks
             }
             finally { host.Close(); guest.Close(); }
         });
+        yield return ("A handler that throws (a dialog with no UI behind it) never escapes Update, and the others still run", () =>
+        {
+            var (hostStream, guestStream) = PipeStream.Pair();
+            var host = new TimberServer(new PipeListener(hostStream), () => Task.FromResult(new byte[] { 7, 8, 9 }), null)
+                { CompatibilityIdentity = "same" };
+            var guest = new TimberClient(guestStream) { CompatibilityIdentity = "same" };
+            int goodMaps = 0; var errors = new List<string>(); var logs = new List<string>();
+            guest.OnLog += logs.Add;
+            guest.OnMapReceived += _ => throw new NullReferenceException("no panel stack");
+            guest.OnMapReceived += _ => goodMaps++;
+            guest.OnError += _ => throw new NullReferenceException("no panel stack");
+            guest.OnError += errors.Add;
+            try
+            {
+                host.Start(); guest.Start();
+                // Update itself must never throw; the failed load is reported through OnError on a later update.
+                Check(SpinWait.SpinUntil(() => { host.Update(); guest.Update(); return errors.Count > 0; }, 4000), "the failed load was never reported");
+                guest.Update();
+                Check(goodMaps == 1, "the second map handler did not run");
+                Check(errors.Count == 1 && errors[0].Contains("could not be loaded"), string.Join(" | ", errors));
+                Check(logs.Any(l => l.Contains("Ignoring an error in a handler")), "the failure was not logged");
+            }
+            finally { host.Close(); guest.Close(); }
+        });
         yield return ("A session between different builds never shares a mod list", () =>
         {
             var (hostStream, guestStream) = PipeStream.Pair();

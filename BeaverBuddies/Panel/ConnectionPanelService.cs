@@ -168,6 +168,7 @@ namespace BeaverBuddies.Panel
                 TickRate = tickRate,
                 Speed = speed.CurrentSpeed,
                 HostPacingPercent = replay?.HostPacingPercent ?? 100,
+                HostPacingHolding = replay?.HostPacingHolding == true,
             };
 
             // Names come from player activity (the same names other players chose for pings and cursors).

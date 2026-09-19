@@ -70,6 +70,7 @@ namespace BeaverBuddies.Panel
         public float Speed;
         /// <summary>Host only: percent of the chosen speed the host is running at. Below 100 while easing off for a guest.</summary>
         public int HostPacingPercent = 100;
+        public bool HostPacingHolding;
         public List<PanelPlayer> Players = new List<PanelPlayer>();
     }
 
@@ -164,7 +165,9 @@ namespace BeaverBuddies.Panel
                 if (worst != null)
                     model.GuestsBehindText = t(worst == 1 ? "BeaverBuddies.Panel.TicksOne" : "BeaverBuddies.Panel.TicksMany",
                         new object[] { worst.Value });
-                if (input.HostPacingPercent < 100)
+                if (input.HostPacingHolding)
+                    model.PacingText = t("BeaverBuddies.Panel.PacingHolding", new object[0]);
+                else if (input.HostPacingPercent < 100)
                     model.PacingText = t("BeaverBuddies.Panel.PacingValue", new object[] { input.HostPacingPercent });
             }
 

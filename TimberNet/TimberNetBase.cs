@@ -496,8 +496,35 @@ namespace TimberNet
         private void ProcessReceivedMap()
         {
             if (mapBytes == null) return;
-            OnMapReceived?.Invoke(mapBytes);
+            byte[] received = mapBytes;
             mapBytes = null;
+            if (!NotifyEach(OnMapReceived, handler => ((MapReceived)handler)(received), "the received save"))
+            {
+                // Without this the guest would sit in the menu with no explanation.
+                QueueError("The save from the host arrived but could not be loaded. See Player.log for details.");
+            }
+        }
+
+        /// <summary>
+        /// Calls every subscriber by itself and never lets one throw into the caller. These handlers show
+        /// dialogs and load scenes, and they are reached from the game's update loop: in 1.0.4 one of them
+        /// threw while reporting a lost connection and the uncaught exception crashed the game. A failing
+        /// handler is logged; the others still run. Returns false if any subscriber failed.
+        /// </summary>
+        private bool NotifyEach(Delegate? handlers, Action<Delegate> call, string what)
+        {
+            if (handlers == null) return true;
+            bool allSucceeded = true;
+            foreach (Delegate handler in handlers.GetInvocationList())
+            {
+                try { call(handler); }
+                catch (Exception e)
+                {
+                    allSucceeded = false;
+                    Log($"Ignoring an error in a handler for {what}: {e}");
+                }
+            }
+            return allSucceeded;
         }
 
         /**
@@ -506,9 +533,17 @@ namespace TimberNet
         public void Update()
         {
             ProcessLogs();
-            while (sessionFaults.TryDequeue(out string? fault)) OnSessionFault?.Invoke(fault);
+            while (sessionFaults.TryDequeue(out string? fault))
+            {
+                string message = fault;
+                NotifyEach(OnSessionFault, handler => ((MessageReceived)handler)(message), "a session fault");
+            }
             // UI subscribers must only run on the caller's update thread.
-            while (errorQueue.TryDequeue(out string? error)) OnError?.Invoke(error);
+            while (errorQueue.TryDequeue(out string? error))
+            {
+                string message = error;
+                NotifyEach(OnError, handler => ((MessageReceived)handler)(message), "a connection error");
+            }
             while (peerAdvisories.TryDequeue(out var advisory))
             {
                 // Optional information: a handler that fails must never end the session.
