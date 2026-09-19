@@ -1,5 +1,13 @@
 # Stability previews: cumulative changelog
 
+## Preview 15 UI hotfix — 1.1.0-stability.15-ui.1
+
+- Fix overlapping status-panel text with explicit label and row sizing.
+- Preserve collapse and hide controls; restore with **Esc → Multiplayer status**.
+- Includes all Preview 15 localization, Steam networking and recovery changes.
+- Release Steam build passed; 18/18 status checks passed. Panel appearance confirmed working in-game by the host.
+
+
 
 
 Based on upstream BeaverBuddies `v1.1` commit

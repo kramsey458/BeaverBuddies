@@ -4,10 +4,12 @@ Smoother, more reliable co-op for **Timberborn 1.1**, built on [BeaverBuddies by
 
 This fork focuses on reducing multiplayer desyncs, fixing crashes, cutting mod overhead, and restoring normal controls after reconnecting. It keeps BeaverBuddies' shared-settlement co-op experience, with additional fixes for the simulation and networking problems encountered during play.
 
-**[Download the compiled mod](https://github.com/kramsey458/BeaverBuddies-Multiplayer-Stability-Fork/releases/download/v1.1.0-stability.15/BeaverBuddies-stability-preview15.zip)** · **[Release notes](https://github.com/kramsey458/BeaverBuddies-Multiplayer-Stability-Fork/releases/tag/v1.1.0-stability.15)** · **[Full changelog](STABILITY-CHANGELOG.md)**
+**[Download the compiled mod](https://github.com/kramsey458/BeaverBuddies-Multiplayer-Stability-Fork/releases/download/v1.1.0-stability.15-ui.1/BeaverBuddies-stability-preview15-ui-hotfix.zip)** · **[Release notes](https://github.com/kramsey458/BeaverBuddies-Multiplayer-Stability-Fork/releases/tag/v1.1.0-stability.15-ui.1)** · **[Full changelog](STABILITY-CHANGELOG.md)**
 
-Current preview: **1.1.0-stability.15** · Built and tested against **Timberborn 1.1.2.4** · No compilation required
+Current preview: **1.1.0-stability.15-ui.1** · Built and tested against **Timberborn 1.1.2.4** · No compilation required
 
+
+The Preview 15 UI hotfix fixes overlapping status-panel text. Restore a hidden panel with **Esc → Multiplayer status**.
 
 Preview 15 fixes the startup localization error and includes the Steam invite networking and recovery changes from Preview 14. See [Steam hosting and playtest instructions](STEAM-INVITES.md).
 
@@ -37,9 +39,9 @@ See the [reconnect guide](RECONNECT-GRACE.md) and [status panel controls](CONNEC
 ## Install
 
 1. **Close Timberborn on both computers.**
-2. Download **BeaverBuddies-stability-preview15.zip** from the link above. The source archives are for developers.
+2. Download **BeaverBuddies-stability-preview15-ui-hotfix.zip** from the link above. The source archives are for developers.
 3. Extract the `BeaverBuddies-StabilityPreview` folder into your actual `Documents/Timberborn/Mods` folder. When upgrading, replace the previous fork's files.
-4. In the game's mod menu, enable **BeaverBuddies - Stability Preview**, version **1.1.0-stability.15**, plus **Harmony** and **Mod Settings**. Disable the standard Workshop BeaverBuddies and duplicate local copies.
+4. In the game's mod menu, enable **BeaverBuddies - Stability Preview**, version **1.1.0-stability.15-ui.1**, plus **Harmony** and **Mod Settings**. Disable the standard Workshop BeaverBuddies and duplicate local copies.
 5. Restart the game on both computers. Host or join using the usual BeaverBuddies flow, including direct IP and port.
 
 **Every player must use the same compiled ZIP.** The compatibility check compares the game, all enabled mods, loaded builds, order, files and registered settings. Replacing files while the game is running is not enough; restart after updating. Separately compiled copies can also be rejected.

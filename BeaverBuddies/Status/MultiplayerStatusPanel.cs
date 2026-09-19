@@ -97,6 +97,7 @@ namespace BeaverBuddies.Status
         {
             panel = new VisualElement { name = "BeaverBuddiesStatus", pickingMode = PickingMode.Position };
             panel.style.width = 304; panel.style.maxWidth = new Length(100, LengthUnit.Percent);
+            panel.style.flexShrink = 0;
             panel.style.marginTop = 8; panel.style.paddingLeft = 12; panel.style.paddingRight = 12;
             panel.style.paddingTop = 8; panel.style.paddingBottom = 8;
             panel.style.backgroundColor = new Color(.055f, .085f, .095f, .96f);
@@ -106,6 +107,7 @@ namespace BeaverBuddies.Status
             panel.RegisterCallback<PointerDownEvent>(e => e.StopPropagation());
             panel.RegisterCallback<WheelEvent>(e => e.StopPropagation());
             var header = new VisualElement(); header.style.flexDirection = FlexDirection.Row; header.style.alignItems = Align.Center;
+            header.style.minHeight = 25; header.style.flexShrink = 0;
             title = Text("CO-OP"); title.style.unityFontStyleAndWeight = FontStyle.Bold; title.style.fontSize = 11;
             title.style.color = new Color(.5f, .85f, .75f); title.style.flexGrow = 1; header.Add(title);
             collapse = SmallButton("−", () => { Settings.SetStatusPanelCollapsed(!Settings.StatusPanelCollapsed); ApplyVisibility(); nextUpdate = 0; });
@@ -114,7 +116,7 @@ namespace BeaverBuddies.Status
             hide.tooltip = "Hide. Restore with Multiplayer status in the pause menu."; header.Add(hide); panel.Add(header);
             state = Text("Connecting…"); state.style.unityFontStyleAndWeight = FontStyle.Bold;
             state.style.marginTop = 2; panel.Add(state);
-            body = new VisualElement(); body.style.marginTop = 8; panel.Add(body);
+            body = new VisualElement(); body.style.marginTop = 8; body.style.flexShrink = 0; panel.Add(body);
             connection = Row("Session", "Your role and the number of connected guests.");
             latency = Row("Response", "Application round-trip time, including send queues and peer processing. Not a pure network ping.");
             simulation = Row("Simulation", "Local simulation ticks per wall-clock second, averaged over two seconds. Not rendered FPS.");
@@ -125,11 +127,27 @@ namespace BeaverBuddies.Status
             hint = Text(""); hint.style.whiteSpace = WhiteSpace.Normal; hint.style.fontSize = 11;
             hint.style.color = new Color(.65f, .74f, .77f); hint.style.marginTop = 8; body.Add(hint);
         }
-        static Label Text(string value) => new Label(value) { enableRichText = false, pickingMode = PickingMode.Ignore };
+        static Label Text(string value)
+        {
+            var label = new Label(value) { enableRichText = false, pickingMode = PickingMode.Ignore };
+            // Explicit metrics keep inherited game label styles from collapsing our rows.
+            label.style.position = Position.Relative;
+            label.style.height = StyleKeyword.Auto;
+            label.style.minHeight = 20;
+            label.style.minWidth = 0;
+            label.style.flexShrink = 0;
+            label.style.marginTop = label.style.marginBottom = 0;
+            label.style.marginLeft = label.style.marginRight = 0;
+            label.style.paddingTop = label.style.paddingBottom = 0;
+            label.style.paddingLeft = label.style.paddingRight = 0;
+            label.style.whiteSpace = WhiteSpace.Normal;
+            return label;
+        }
         static Button SmallButton(string text, Action action)
         {
             var button = new Button(action) { text = text, focusable = false };
             button.style.width = 25; button.style.height = 23; button.style.marginLeft = 4;
+            button.style.minWidth = 25; button.style.minHeight = 23; button.style.flexShrink = 0;
             button.style.paddingLeft = button.style.paddingRight = 0;
             button.style.fontSize = 16; button.style.color = new Color(.85f, .94f, .93f);
             button.style.backgroundColor = new Color(.13f, .22f, .24f); return button;
@@ -137,9 +155,11 @@ namespace BeaverBuddies.Status
         Label Row(string name, string tooltip)
         {
             var row = new VisualElement { tooltip = tooltip }; row.style.flexDirection = FlexDirection.Row;
-            row.style.marginTop = 3;
+            row.style.marginTop = 3; row.style.minHeight = 22; row.style.flexShrink = 0;
+            row.style.alignItems = Align.Center;
             var label = Text(name); label.style.width = 78; label.style.color = new Color(.65f, .74f, .77f); row.Add(label);
             var value = Text("—"); value.style.flexGrow = 1; value.style.unityTextAlign = TextAnchor.MiddleRight; value.style.fontSize = 12;
+            value.style.flexShrink = 1;
             row.Add(value); body.Add(row); return value;
         }
         void Render(StatusText text)

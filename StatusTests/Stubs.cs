@@ -12,11 +12,15 @@ namespace UnityEngine.UIElements
     public enum FlexDirection { Row }
     public enum Align { Center }
     public enum WhiteSpace { Normal }
+    public enum Position { Relative }
+    public enum StyleKeyword { Auto }
     public enum ScrollViewMode { Vertical }
     public struct Length {public float Value;public Length(float n,LengthUnit unit){Value=n;}}
-    public struct Size { public float Value;public static implicit operator Size(float value)=>new(){Value=value};public static implicit operator Size(Length value)=>new(){Value=value.Value};}
+    public struct Size { public float Value;public static implicit operator Size(float value)=>new(){Value=value};public static implicit operator Size(Length value)=>new(){Value=value.Value};public static implicit operator Size(StyleKeyword value)=>new(){Value=float.NaN};}
     public class Style
     {
+        public Position position;
+        public Size minHeight,minWidth,flexShrink,marginBottom,marginRight;
         public Size width,maxWidth,maxHeight,height,marginTop,marginLeft,paddingLeft,paddingRight,paddingTop,paddingBottom,borderTopLeftRadius,borderTopRightRadius,borderBottomLeftRadius,borderBottomRightRadius,borderLeftWidth,borderTopWidth,fontSize,flexGrow;
         public UnityEngine.Color backgroundColor,borderLeftColor,color,borderTopColor;public DisplayStyle display;public FlexDirection flexDirection;public Align alignItems;public UnityEngine.FontStyle unityFontStyleAndWeight;public UnityEngine.TextAnchor unityTextAlign;public WhiteSpace whiteSpace;
     }
