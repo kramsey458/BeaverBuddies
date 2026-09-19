@@ -13,7 +13,7 @@ void Throws(Action run){try{run();}catch(IOException){return;}throw new Exceptio
 void Wait(Func<bool> predicate,int ms=3000){var w=Stopwatch.StartNew();while(!predicate()){if(w.ElapsedMilliseconds>ms)throw new Exception("Timed out");Thread.Sleep(5);}}
 (SteamRelaySocket Socket,HSteamNetConnection Handle) Socket(){var h=SteamNetworkingSockets.New(new(2));return(new(new(2),h),h);}
 void Feed(HSteamNetConnection handle,params byte[] bytes)=>SteamNetworkingSockets.States[handle].Incoming.Enqueue(bytes);
-SteamListener Host(){var l=new SteamListener(123);l.Start();return l;}
+SteamListener Host(){var l=new SteamListener();l.Start();CallResult<LobbyCreated_t>.Last.Fire(new(){m_eResult=EResult.k_EResultOK,m_ulSteamIDLobby=123});return l;}
 void Cleanup(){SteamNetworkingSockets.Backpressure=false;SteamNetworkingSockets.SendResult=EResult.k_EResultOK;SteamNetworkingSockets.PendingBytes=0;SteamNetworkingSockets.FindingRoute=false;SteamNetworkingSockets.AutoPair=false;}
 Test("Relay stream preserves tails across split header/body reads",()=>{
  var(s,h)=Socket();try{Feed(h,1,2,3,4,5,6);var b=new byte[8];Check(s.Read(b,2,2)==2&&b[2]==1&&b[3]==2);Check(s.Read(b,0,3)==3&&b[0]==3&&b[2]==5);Check(s.Read(b,0,8)==1&&b[0]==6);}finally{s.Close();}
@@ -68,10 +68,6 @@ Test("Cancel hosting leaves a lobby that is created after the cancel",()=>{
  var l=new SteamListener();l.Start();var result=CallResult<LobbyCreated_t>.Last;l.Stop();int before=SteamMatchmaking.Leaves;
  result.Fire(new(){m_eResult=EResult.k_EResultOK,m_ulSteamIDLobby=99});Check(SteamMatchmaking.Leaves==before+1);
 });
-Test("Recovery retains lobby members and does not create another lobby",()=>{
- var l=Host();int creates=SteamMatchmaking.Creates,leaves=SteamMatchmaking.Leaves;ulong id=l.DetachLobby();l.Stop();Check(SteamMatchmaking.Leaves==leaves);
- var fresh=new SteamListener(id);fresh.Start();Check(SteamMatchmaking.Creates==creates&&fresh.LobbyID.m_SteamID==123);fresh.Stop();Check(SteamMatchmaking.Leaves==leaves+1);
-});
 Test("Only lobby members can establish native host connections",()=>{
  var l=Host();try{int before=SteamNetworkingSockets.Accepts;var h=SteamNetworkingSockets.New(new(99),SteamNetworkingSockets.Listener);
  SteamNetworkingSockets.Signal(h,k_ESteamNetworkingConnectionState_Connecting);Check(SteamNetworkingSockets.Accepts==before&&!SteamNetworkingSockets.States[h].Info.m_eState.Equals(k_ESteamNetworkingConnectionState_Connecting));}finally{l.Stop();}
@@ -85,20 +81,12 @@ Test("Stopping listener wakes a waiting accept worker",()=>{var l=Host();var t=T
 Test("Failed Steam startup leaves a real TCP listener usable",()=>{
  SteamNetworkingSockets.ListenFails=true;var tcp=new TCPListenerWrapper(0);var multi=new MultiSocketListener(tcp,new SteamListener());try{multi.Start();Check(multi.GetListener<SteamListener>().Status.Contains("Direct IP"));}finally{multi.Stop();SteamNetworkingSockets.ListenFails=false;}
 });
-Test("Large compatibility profiles are fragmented to the relay stream limit",()=>{
- SteamNetworkingSockets.AutoPair=true;var host=Host();var guest=new SteamRelaySocket(new(1));try{
- guest.ConnectAsync().GetAwaiter().GetResult();var accepted=host.AcceptClient();
- string identity=string.Concat(Enumerable.Range(0,2200).Select(_=>Guid.NewGuid().ToString("N")));
- var a=Task.Run(()=>CompatibilityHandshake.Run(accepted,identity,true));var b=Task.Run(()=>CompatibilityHandshake.Run(guest,identity,false));
- Check(Task.WaitAll(new[]{a,b},5000));
- }finally{guest.Close();host.Stop();Cleanup();}
-});
 Test("Real TimberNet sends a multi-megabyte save over relay without Unity receive pumping",()=>{
  SteamNetworkingSockets.AutoPair=true;var listener=Host();var bytes=new byte[2*1024*1024+19];new Random(7).NextBytes(bytes);
- var server=new TimberServer(listener,()=>Task.FromResult(bytes),null){CompatibilityIdentity="same",ReconnectTickets=new()};
- var client=new TimberClient(new SteamRelaySocket(new(1))){CompatibilityIdentity="same",UseReconnectHandshake=true};
+ var server=new TimberServer(listener,()=>Task.FromResult(bytes),null){KeepAliveEnabled=true};
+ var client=new TimberClient(new SteamRelaySocket(new(1))){KeepAliveEnabled=true};
  byte[] loaded=null;string error=null;client.OnMapReceived+=b=>loaded=b;client.OnError+=e=>error=e;
- try{server.Start();client.Start();Wait(()=>{server.Update();client.Update();return loaded!=null||error!=null;},8000);Check(error==null,error);Check(loaded.SequenceEqual(bytes));Check(client.ReconnectToken?.Length==64);}
+ try{server.Start();client.Start();Wait(()=>{server.Update();client.Update();return loaded!=null||error!=null;},8000);Check(error==null,error);Check(loaded.SequenceEqual(bytes));}
  finally{client.Close();server.Close();Cleanup();}
 });
 Test("Native listener closes unexpected self connections",()=>{var l=Host();try{int before=SteamNetworkingSockets.Accepts;var h=SteamNetworkingSockets.New(new(1),SteamNetworkingSockets.Listener);SteamNetworkingSockets.Signal(h,k_ESteamNetworkingConnectionState_Connecting);Check(SteamNetworkingSockets.Accepts==before);}finally{l.Stop();}});
@@ -125,30 +113,18 @@ Test("Stale lobby entry after a newer invite is ignored and left",()=>{
  Callback<LobbyEnter_t>.Emit(new(){m_ulSteamIDLobby=789,m_EChatRoomEnterResponse=1});Check(f.Connection.Connects==1);
 });
 
-Test("Recovery accepts an original Steam identity even after Steam drops lobby membership",()=>{
- var l=new SteamListener(123,new ulong[]{2});l.Start();SteamMatchmaking.Members.Remove(new(2));
- try{int before=SteamNetworkingSockets.Accepts;var h=SteamNetworkingSockets.New(new(2),SteamNetworkingSockets.Listener);
- SteamNetworkingSockets.Signal(h,k_ESteamNetworkingConnectionState_Connecting);Check(SteamNetworkingSockets.Accepts==before+1);}
- finally{SteamMatchmaking.Members.Add(new(2));l.Stop();}
-});
-Test("Recovery refuses newly invited identities that were not in the old session",()=>{
- var l=new SteamListener(123,new ulong[]{3});l.Start();
- try{int before=SteamNetworkingSockets.Accepts;var h=SteamNetworkingSockets.New(new(2),SteamNetworkingSockets.Listener);
- SteamNetworkingSockets.Signal(h,k_ESteamNetworkingConnectionState_Connecting);Check(SteamNetworkingSockets.Accepts==before);}
- finally{l.Stop();}
-});
 Test("Repeated failed handshakes do not exhaust Steam listener slots",()=>{
  var l=Host();try{for(int i=0;i<12;i++){
  var h=SteamNetworkingSockets.New(new(2),SteamNetworkingSockets.Listener);SteamNetworkingSockets.Signal(h,k_ESteamNetworkingConnectionState_Connecting);
  SteamNetworkingSockets.Signal(h,k_ESteamNetworkingConnectionState_Connected);var socket=l.AcceptClient();socket.Close();
  }}finally{l.Stop();}
 });
-Test("Mixed Steam and real TCP guests share ordered events and reconnect tickets",()=>{
- SteamNetworkingSockets.AutoPair=true;var tcp=new LocalListener();var steam=new SteamListener(123);
- var server=new TimberServer(new MultiSocketListener(tcp,steam),()=>Task.FromResult(new byte[]{1,2,3}),null){CompatibilityIdentity="mixed",ReconnectTickets=new()};
+Test("Mixed Steam and real TCP guests share ordered events without compatibility or reconnect handshakes",()=>{
+ SteamNetworkingSockets.AutoPair=true;var tcp=new LocalListener();var steam=Host();
+ var server=new TimberServer(new MultiSocketListener(tcp,steam),()=>Task.FromResult(new byte[]{1,2,3}),null){KeepAliveEnabled=true};
  TimberClient a=null,b=null;try{
- server.Start();a=new(new SteamRelaySocket(new(1))){CompatibilityIdentity="mixed",UseReconnectHandshake=true};
- b=new(new TCPClientWrapper("127.0.0.1",tcp.Port)){CompatibilityIdentity="mixed",UseReconnectHandshake=true};
+ server.Start();a=new(new SteamRelaySocket(new(1))){KeepAliveEnabled=true};
+ b=new(new TCPClientWrapper("127.0.0.1",tcp.Port)){KeepAliveEnabled=true};
  bool mapA=false,mapB=false;a.OnMapReceived+=_=>mapA=true;b.OnMapReceived+=_=>mapB=true;a.Start();b.Start();
  Wait(()=>{server.Update();a.Update();b.Update();return mapA&&mapB&&server.ClientCount==2;},5000);
  for(int i=0;i<100;i++)server.DoUserInitiatedEvent(new JObject{["type"]="Action",["ticksSinceLoad"]=1,["n"]=i});
@@ -156,28 +132,10 @@ Test("Mixed Steam and real TCP guests share ordered events and reconnect tickets
  Wait(()=>{server.Update();a.Update();b.Update();ra.AddRange(a.ReadEvents(1));rb.AddRange(b.ReadEvents(1));return ra.Count==100&&rb.Count==100;},5000);
  Check(ra.Select(x=>(int)x["n"]).SequenceEqual(Enumerable.Range(0,100)));Check(rb.Select(x=>(int)x["n"]).SequenceEqual(Enumerable.Range(0,100)));
  Check(a.Hash==b.Hash&&a.Hash==server.Hash);
- Check(a.ReconnectToken.Length==64&&b.ReconnectToken.Length==64&&a.ReconnectToken!=b.ReconnectToken);
+
  }finally{a?.Close();b?.Close();server.Close();Cleanup();}
 });
 
-Test("Relay guest reloads a fresh host snapshot using the same lobby and recovery ticket",()=>{
- SteamNetworkingSockets.AutoPair=true;var listener=new SteamListener(123);
- var server=new TimberServer(listener,()=>Task.FromResult(new byte[]{1,2,3}),null){CompatibilityIdentity="recovery",ReconnectTickets=new()};
- TimberClient client=null;
- try{
-  server.Start();client=new(new SteamRelaySocket(new(1))){CompatibilityIdentity="recovery",UseReconnectHandshake=true};
-  byte[] loaded=null;client.OnMapReceived+=b=>loaded=b;client.Start();
-  Wait(()=>{server.Update();client.Update();return loaded!=null&&server.ReconnectTickets.Export().Length==1;},5000);
-  string ticket=client.ReconnectToken;var roster=server.ReconnectTickets.Export();var ids=listener.ExportPeers();ulong lobby=listener.DetachLobby();
-  client.Close();server.Close();loaded=null;
-  listener=new SteamListener(lobby,ids);
-  server=new(listener,()=>Task.FromResult(new byte[]{9,8,7,6}),null){CompatibilityIdentity="recovery",ReconnectTickets=new(roster,"new-world","digest")};
-  server.Start();client=new(new SteamRelaySocket(new(1))){CompatibilityIdentity="recovery",UseReconnectHandshake=true,ReconnectToken=ticket};
-  client.OnMapReceived+=b=>loaded=b;client.Start();
-  Wait(()=>{server.Update();client.Update();return loaded!=null;},5000);
-  Check(loaded.SequenceEqual(new byte[]{9,8,7,6})&&client.ReconnectToken==ticket&&client.RecoveryId=="new-world"&&client.RecoveryDigest=="digest");
- }finally{client?.Close();server.Close();Cleanup();}
-});
 Console.WriteLine($"{total-failures}/{total} passed (production Steam code; simulated native Steam boundary)");
 return failures==0?0:1;
 
@@ -186,7 +144,7 @@ sealed class InviteFixture {
  public Timberborn.CoreUI.PanelStack Panels=new();public Timberborn.CoreUI.DialogBoxShower Dialogs=new();
  public SteamOverlayConnectionService Service;
  public InviteFixture(){
-  BeaverBuddies.IO.EventIO.IsNull=true;BeaverBuddies.Connect.SnapshotResyncService.Active=false;SteamGuestLobby.Leave();
+  BeaverBuddies.IO.EventIO.IsNull=true;SteamGuestLobby.Leave();
   Service=new(new(),Connection,new(),Panels,new(),new(),Dialogs);Service.UpdateSingleton();
  }
  public void Invite(ulong id)=>Callback<GameLobbyJoinRequested_t>.Emit(new(){m_steamIDLobby=new(id)});

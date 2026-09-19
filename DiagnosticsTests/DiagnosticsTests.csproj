@@ -3,6 +3,5 @@
   <ItemGroup>
     <ProjectReference Include="../TimberNet/TimberNet.csproj" />
     <Compile Include="../BeaverBuddies/DesyncDetecter/RollingDiagnosticsService.cs" Link="RollingDiagnosticsService.cs" />
-    <Compile Include="../BeaverBuddies/IO/BuildCompatibility.cs" Link="BuildCompatibility.cs" />
   </ItemGroup>
 </Project>

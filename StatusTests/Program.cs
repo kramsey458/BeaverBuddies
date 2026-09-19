@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 int passed=0,failed=0;
 void Check(bool condition,string why="assertion failed"){if(!condition)throw new Exception(why);}
 void Test(string name,Action action){try{action();Console.WriteLine("PASS "+name);passed++;}catch(Exception e){Console.WriteLine("FAIL "+name+": "+e.GetBaseException().Message);failed++;}}
-StatusFacts Facts()=>new(){Connected=true,Loaded=true,Compatible=true,Rate=20,ConnectedPeers=1};
+StatusFacts Facts()=>new(){Connected=true,Loaded=true,Rate=20,ConnectedPeers=1};
 PeerStatus Peer(int remote=100,int local=100,double rate=20,double milliseconds=25,double age=0,bool paused=false)
 {
     var telemetry=new ConnectionTelemetry();object peer=new();telemetry.Probe(peer,0,_=>{});
@@ -52,9 +52,8 @@ Test("Queued memory is explicitly separate from received simulation backlog",()=
     var f=Facts();f.Peers.Add(Peer());f.QueuedBytes=300*1024;f.QueuedMessages=50;f.BufferedTicks=0;
     var result=StatusText.From(f);Check(result.State=="Connection delayed" && result.Outgoing.Contains("300 KiB") && result.Incoming.Contains("0 ticks buffered"));
 });
-Test("Recovery, compatibility and disconnection supersede normal metrics",()=>{
-    var f=Facts();f.Peers.Add(Peer());f.Recovering=true;f.Recovery="Saving";var recovering=StatusText.From(f);Check(recovering.State=="Recovering" && recovering.Latency=="—" && recovering.Peers.Length==0);
-    f.Recovering=false;f.Compatible=false;Check(StatusText.From(f).State=="Checking mods");f.Connected=false;Check(StatusText.From(f).State=="Disconnected");f.Failed=true;Check(StatusText.From(f).State=="Session stopped");
+Test("Loading and disconnection suppress normal running status",()=>{
+    var f=Facts();f.Loaded=false;Check(StatusText.From(f).State=="Loading");f.Connected=false;Check(StatusText.From(f).State=="Disconnected");f.Failed=true;Check(StatusText.From(f).State=="Session stopped");
 });
 Test("Host without guests has no fictitious ping",()=>{
     var f=Facts();f.Host=true;f.ConnectedPeers=0;Check(StatusText.From(f).State=="No guests connected" && StatusText.From(f).Latency=="—");
@@ -92,8 +91,8 @@ Console.WriteLine($"{passed}/{passed+failed} passed (production status code; moc
 
 (MultiplayerStatusPanel Panel,UILayout Layout,LoadingScreen Loading) Fixture()
 {
-    SingletonManager.Items.Clear();Settings.StatusPanelEnabled=true;Settings.StatusPanelCollapsed=false;ReplayService.IsLoaded=true;ReplayService.CompatibilityReady=true;ReplayService.HasReplayFailure=false;
-    BeaverBuddies.Connect.SnapshotResyncService.Active=false;new ReplayService();ReplayService.Network=new FakeNet();ReplayService.Network.Start();
+    SingletonManager.Items.Clear();Settings.StatusPanelEnabled=true;Settings.StatusPanelCollapsed=false;ReplayService.IsLoaded=true;ReplayService.HasReplayFailure=false;
+    new ReplayService();ReplayService.Network=new FakeNet();ReplayService.Network.Start();
     var layout=new UILayout();var loading=new LoadingScreen();var panel=new MultiplayerStatusPanel(layout,loading);panel.PostLoad();return(panel,layout,loading);
 }
 sealed class FakeNet:TimberNetBase { }

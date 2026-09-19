@@ -35,25 +35,21 @@ namespace BeaverBuddies.IO
         // happen in the same order for the server and clients.
         public override UserEventBehavior UserEventBehavior => UserEventBehavior.QueuePlay;
 
-        public bool HasSteamClients => NetBase?.GetConnections().Any(peer => peer is SteamRelaySocket) == true;
         public SteamListener SteamListener => (SocketListener as MultiSocketListener)?.GetListener<SteamListener>();
-        public ulong DetachSteamLobby() => SteamListener?.DetachLobby() ?? 0;
-        public ulong[] ExportSteamPeers() => SteamListener?.ExportPeers();
 
         public ISocketListener SocketListener { get; private set; }
 
         // We only support a static map; see note above
-        public void Start(byte[] mapBytes, ReconnectTickets tickets = null, ulong steamLobby = 0, ulong[] steamPeers = null)
+        public void Start(byte[] mapBytes)
         {
             try
             {
-                string compatibility = BuildCompatibility.CreateIdentity();
                 List<ISocketListener> listeners = [
                     new TCPListenerWrapper(Settings.Port)
                 ];
                 if (SteamOverlayConnectionService.IsSteamEnabled && Settings.EnableSteam)
                 {
-                    listeners.Add(new SteamListener(steamLobby, steamPeers));
+                    listeners.Add(new SteamListener());
                 }
                 SocketListener = new MultiSocketListener(listeners.ToArray());
                 NetBase = new TimberServer(
@@ -67,8 +63,6 @@ namespace BeaverBuddies.IO
                     },
                     CreateInitEvent()
                 );
-                NetBase.CompatibilityIdentity = compatibility;
-                NetBase.ReconnectTickets = tickets ?? new ReconnectTickets();
             }
             catch (Exception e)
             {
@@ -76,15 +70,13 @@ namespace BeaverBuddies.IO
                 Plugin.Log(e.ToString());
                 NetBase?.Close();
                 SocketListener?.Stop();
-                throw new InvalidOperationException("Could not start a compatible multiplayer session: " + e.Message, e);
+                throw new InvalidOperationException("Could not start a multiplayer session: " + e.Message, e);
             }
-            //netBase = new TimberServer(port, mapProvider, null);
+            NetBase.KeepAliveEnabled = true;
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
-            NetBase.OnControl += (peer, message) => BeaverBuddies.Connect.SnapshotResyncService.Receive(this, peer, message);
             NetBase.OnControl += (peer, message) => BeaverBuddies.DesyncDetecter.RollingDiagnosticsService.Receive(this, message);
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnError += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
-            NetBase.OnPeerDisconnected += peer => BeaverBuddies.Connect.SnapshotResyncService.PeerDisconnected(this, peer);
             NetBase.OnLog += Plugin.Log;
             NetBase.OnMapReceived += NetBase_OnClientConnected;
             NetBase.Start();

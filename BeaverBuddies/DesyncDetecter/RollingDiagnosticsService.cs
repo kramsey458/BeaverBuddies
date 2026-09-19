@@ -87,8 +87,8 @@ namespace BeaverBuddies.DesyncDetecter
                             stock.Append("s:").Append(good.GoodId).Append('=').Append(good.Amount).Append(';');
                         }
                     }
-                    entitySamples.Add(new JObject { ["id"] = entity.EntityId.ToString("D"), ["job"] = CompatibilityProfile.Digest(job),
-                        ["inventory"] = CompatibilityProfile.Digest(stock.ToString()), ["truncated"] = truncated });
+                    entitySamples.Add(new JObject { ["id"] = entity.EntityId.ToString("D"), ["job"] = DiagnosticDigest.Compute(job),
+                        ["inventory"] = DiagnosticDigest.Compute(stock.ToString()), ["truncated"] = truncated });
                 }
                 var columns = water._threadSafeWaterColumns;
                 var counts = water._threadSafeColumnCounts;
@@ -128,7 +128,7 @@ namespace BeaverBuddies.DesyncDetecter
                     object value = field.GetValue(replayEvent);
                     if (value is string s && s.Length <= 4096)
                     {
-                        fields[field.Name] = CompatibilityProfile.Digest(s);
+                        fields[field.Name] = DiagnosticDigest.Compute(s);
                         if (targets.Count < 8 && Guid.TryParse(s, out var target)) targets.Add(target.ToString("D"));
                     }
                     else if (value is int || value is bool || value is float || value is double || value is Guid || value is Enum)
@@ -137,7 +137,7 @@ namespace BeaverBuddies.DesyncDetecter
                 trace.Event(new JObject { ["tick"] = SingletonManager.GetSingleton<ReplayService>()?.TicksSinceLoad,
                     ["eventTick"] = replayEvent.ticksSinceLoad, ["type"] = replayEvent.type, ["phase"] = phase,
                     ["expectedRng"] = replayEvent.randomS0Before, ["actualRng"] = UnityEngine.Random.state.s0,
-                    ["targets"] = targets, ["arguments"] = CompatibilityProfile.Digest(fields.ToString(Newtonsoft.Json.Formatting.None)) });
+                    ["targets"] = targets, ["arguments"] = DiagnosticDigest.Compute(fields.ToString(Newtonsoft.Json.Formatting.None)) });
             }
             catch (Exception error) { Disable(error); }
         }
@@ -174,7 +174,7 @@ namespace BeaverBuddies.DesyncDetecter
                     ["intervalTicks"] = Interval, ["entityWindow"] = EntityWindow, ["waterWindow"] = WaterWindow,
                     ["maxCaptureMilliseconds"] = maxCaptureMilliseconds, ["recorderFailed"] = failed,
                     ["coverage"] = "Rotating samples of completed ticks, not a full-world checksum. No world reads occur at the fault site.",
-                    ["compatibility"] = net?.LoadedCompatibilityIdentity ?? net?.CompatibilityIdentity
+                    ["modVersion"] = Plugin.Version
                 };
                 var report = trace.Freeze(metadata);
                 if (Interlocked.Increment(ref pendingWrites) > 2) { Interlocked.Decrement(ref pendingWrites); Plugin.LogWarning("Rolling diagnostics writer busy; report skipped."); return; }

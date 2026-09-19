@@ -19,16 +19,13 @@ namespace TimberNet
 
         private readonly ISocketStream client;
         private int connectionFailed;
-        protected override bool ConnectionKeepAliveEnabled => UseReconnectHandshake;
-        public bool UseReconnectHandshake { get; set; }
-        public string? ReconnectToken { get; set; }
-        public string? RecoveryId { get; private set; }
-        public string? RecoveryDigest { get; private set; }
+        public bool KeepAliveEnabled { get; set; }
+        protected override bool ConnectionKeepAliveEnabled => KeepAliveEnabled;
         public override void Update()
         {
             base.Update();
-            if (UseReconnectHandshake && SnapshotDigest != null && !IsStopped)
-                if (CompatibilityVerified) CheckConnectionSilence(client); else RefreshConnectionSilence(client);
+            if (ConnectionKeepAliveEnabled && SnapshotDigest != null && !IsStopped)
+                CheckConnectionSilence(client);
         }
 
         volatile bool leaving;
@@ -91,14 +88,7 @@ namespace TimberNet
                     int timeout = (client as IConnectionOptions)?.ConnectTimeoutMilliseconds ?? 3000;
                     if (await Task.WhenAny(connect, Task.Delay(timeout)) != connect) throw new ConnectionFailureException();
                     await connect;
-                    ConnectionStatus = "Connected. Checking installed mods...";
-                    if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, false);
-                    if (!IsStopped && UseReconnectHandshake)
-                    {
-                        var admission = ReconnectHandshake.Guest(client, ReconnectToken);
-                        ReconnectToken = (string?)admission["ticket"];
-                        RecoveryId = (string?)admission["recoveryId"]; RecoveryDigest = (string?)admission["digest"];
-                    }
+                    ConnectionStatus = "Connected. Preparing save transfer...";
                     ConnectionStatus = "Waiting for the host save...";
                     if (!IsStopped) StartListening(client, true);
                 }

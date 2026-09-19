@@ -37,7 +37,6 @@ namespace BeaverBuddies
             containerDefinition.Bind<SteamOverlayConnectionService>().AsSingleton();
             containerDefinition.Bind<RegisteredLocalizationService>().AsSingleton();
             containerDefinition.Bind<Settings>().AsSingleton();
-            containerDefinition.Bind<BuildCompatibility>().AsSingleton();
 
             MultiStartConfigurator.Configure(containerDefinition);
 
@@ -53,7 +52,6 @@ namespace BeaverBuddies
             containerDefinition.Bind<DeterminismService>().AsSingleton();
             containerDefinition.Bind<TickReplacerService>().AsSingleton();
             containerDefinition.Bind<RehostingService>().AsSingleton();
-            containerDefinition.Bind<SnapshotResyncService>().AsSingleton();
             containerDefinition.Bind<MultiplayerInputRecovery>().AsSingleton();
             containerDefinition.Bind<ReportingService>().AsSingleton();
             containerDefinition.Bind<LateTickableBuffer>().AsSingleton();
@@ -63,7 +61,6 @@ namespace BeaverBuddies
             // because it will only trace if the config is set to do so.
             containerDefinition.Bind<DesyncDetecterService>().AsSingleton();
             containerDefinition.Bind<RollingDiagnosticsService>().AsSingleton();
-            containerDefinition.Bind<CompatibilityStatus>().AsSingleton();
             containerDefinition.Bind<BeaverBuddies.Status.MultiplayerStatusPanel>().AsSingleton();
 
         }
@@ -76,11 +73,10 @@ namespace BeaverBuddies
         {
             // This will be called if the player exits to the main menu,
             // so it's best to reset everything.
-            if (!SnapshotResyncService.Active && !ReplayService.HasReplayFailure && EventIO.Get() is ClientEventIO leavingClient)
+            if (!ReplayService.HasReplayFailure && EventIO.Get() is ClientEventIO leavingClient)
                 leavingClient.NetBase?.LeaveSession();
             SingletonManager.Reset();
             EventIO.Reset();
-            SnapshotResyncService.Reset();
             SteamGuestLobby.Leave();
 
             Plugin.Log($"Registering Main Menu Services");
@@ -91,7 +87,6 @@ namespace BeaverBuddies
             containerDefinition.Bind<RegisteredLocalizationService>().AsSingleton();
             containerDefinition.Bind<MultiplayerMapMetadataService>().AsSingleton();
             containerDefinition.Bind<Settings>().AsSingleton();
-            containerDefinition.Bind<BuildCompatibility>().AsSingleton();
 
             //new ReportingService().PostDesync("test").ContinueWith(result => Plugin.Log($"Posted: {result.Result}"));
             containerDefinition.Bind<SteamOverlayConnectionService>().AsSingleton();

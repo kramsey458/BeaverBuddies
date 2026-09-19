@@ -124,7 +124,7 @@ namespace BeaverBuddies
             {
                 // The client shouldn't tick until the server has sent a heartbeat
                 // Check the *next* tick, since current tick has already happened
-                return CompatibilityReady && !SnapshotResyncService.Active && !(io is ClientEventIO && !io.HasEventsForTick(TicksSinceLoad + 1));
+                return !(io is ClientEventIO && !io.HasEventsForTick(TicksSinceLoad + 1));
             }
         }
 
@@ -132,7 +132,6 @@ namespace BeaverBuddies
         internal static TimberNet.TimberNetBase Network => EventIO.Get() switch {
             ServerEventIO host => host.NetBase, ClientEventIO guest => guest.NetBase, _ => null
         };
-        public static bool CompatibilityReady => Network?.CompatibilityVerified ?? true;
         private bool isReset = false;
 
         private bool CanAct => io != null && !isReset && !IsDesynced;
@@ -263,7 +262,7 @@ namespace BeaverBuddies
             // During a replay, we save things manually, only if they're
             // successful.
             if (IsReplayingEvents) return;
-            if (!IsLoaded || !CompatibilityReady || IsDesynced || SnapshotResyncService.Active) return;
+            if (!IsLoaded || IsDesynced) return;
             RollingDiagnosticsService.Record(replayEvent, "submitted");
 
             if (Settings.Debug && Settings.VerboseLogging)
@@ -315,7 +314,7 @@ namespace BeaverBuddies
             int currentTick = ticksSinceLoad;
             ReplayExecution.Run(eventsToReplay, replayEvent =>
             {
-                if (HasReplayFailure || IsDesynced || EventIO.IsNull || SnapshotResyncService.FreezingOldSession) return false;
+                if (HasReplayFailure || IsDesynced || EventIO.IsNull) return false;
                 int eventTime = replayEvent.ticksSinceLoad;
                 if (eventTime > currentTick)
                     return false;
@@ -383,11 +382,26 @@ namespace BeaverBuddies
                 .SetDefaultCancelButton().Show();
         }
 
+        public void HandleConnectionLost(string reason)
+        {
+            if (IsDesynced || HasReplayFailure) return;
+            RollingDiagnosticsService.Trigger("Connection lost: " + reason);
+            IsDesynced = true;
+            TargetSpeed = 0;
+            _tickingService.ShouldInterruptTicking = true;
+            eventsToPlay.Clear(); eventsToSend.Clear();
+            EventIO.Reset();
+            SpeedChangePatcher.SetSpeedSilentlyNow(_speedManager, 0);
+            GetSingleton<BeaverBuddies.Fixes.MultiplayerInputRecovery>()?.RequestReset();
+            GetSingleton<DialogBoxShower>().Create()
+                .SetMessage("Connection to the host was lost.\n\n" + reason + "\n\nAsk the host to save and rehost, then accept a new Steam invite or reconnect manually.")
+                .SetDefaultCancelButton().Show();
+        }
+
         public void HandleDesync()
         {
             if (IsDesynced) return;
             RollingDiagnosticsService.Trigger("desync detected");
-            if (SnapshotResyncService.TryRecover(this)) return;
 
             ClientDesyncedEvent e = new ClientDesyncedEvent()
             {
@@ -408,29 +422,6 @@ namespace BeaverBuddies
             if (io is ClientEventIO oldClient) oldClient.NetBase?.CloseAfterFlush();
             if (io is ServerEventIO oldServer) oldServer.NetBase?.CloseAfterFlush();
             EventIO.Reset();
-        }
-
-        public void FreezeForSnapshot()
-        {
-            IsDesynced = true;
-            TargetSpeed = 0;
-            eventsToPlay.Clear(); eventsToSend.Clear();
-            SpeedChangePatcher.SetSpeedSilentlyNow(_speedManager, 0);
-            GetSingleton<BeaverBuddies.Fixes.MultiplayerInputRecovery>()?.RequestReset();
-        }
-
-        public void FinishTickForSnapshot(Action completed)
-        {
-            // The host can be between buckets even when the displayed speed is paused.
-            Action finish = () =>
-            {
-                GetSingleton<TickableSingletonService>()?.FinishParallelTick();
-                completed();
-            };
-            if (_tickingService.NextBucket == 0) { finish(); return; }
-            if (TargetSpeed == 0) TargetSpeed = 1;
-            SpeedChangePatcher.SetSpeedSilentlyNow(_speedManager, 1);
-            _tickingService.FinishFullTickAndThen(finish);
         }
 
         /**
@@ -489,8 +480,6 @@ namespace BeaverBuddies
             DesyncDetecterService.StartTick(ticksSinceLoad);
 
             IsLoaded = true;
-            try { Network?.SubmitLoadedCompatibility(BuildCompatibility.CreateIdentity()); }
-            catch (Exception error) { AbortReplay("Could not verify loaded mod settings: " + error.Message); }
         }
 
         // TODO: Find a better callback way of waiting until initial game
@@ -511,8 +500,7 @@ namespace BeaverBuddies
                 waitUpdates = -1;
             }
             io?.Update();
-            if (!CanAct || SnapshotResyncService.FreezingOldSession) return;
-            if (!CompatibilityReady) { UpdateSpeed(); return; }
+            if (!CanAct) return;
             // Only replay events on Update if we're paused by the user.
             // Also only send events if paused, so the client doesn't play
             // then before the end of the tick.
@@ -525,7 +513,7 @@ namespace BeaverBuddies
 
         public void SetTargetSpeed(float speed)
         {
-            TargetSpeed = SnapshotResyncService.Active ? 0 : speed;
+            TargetSpeed = speed;
             UpdateSpeed();
         }
 

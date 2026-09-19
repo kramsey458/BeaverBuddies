@@ -65,7 +65,7 @@ namespace BeaverBuddies.Status
                 if (current != null) { network = current; host = current is TimberServer; }
                 var replay = SingletonManager.GetSingleton<ReplayService>();
                 double now = ConnectionTelemetry.Now;
-                bool running = ReplayService.IsLoaded && ReplayService.CompatibilityReady && !ReplayService.HasReplayFailure && !SnapshotResyncService.Active && replay?.TargetSpeed > 0;
+                bool running = ReplayService.IsLoaded && !ReplayService.HasReplayFailure && replay?.TargetSpeed > 0;
                 rate.Observe(replay?.TicksSinceLoad ?? 0, running, now);
                 if (now < nextUpdate) return;
                 nextUpdate = now + .25; // UI and published measurements update at most four times a second.
@@ -76,9 +76,8 @@ namespace BeaverBuddies.Status
                 var facts = new StatusFacts {
                     Host = host, Connected = current != null && current.Started && !current.IsStopped,
                     ConnectedPeers = current is TimberServer server ? server.ClientCount : peers.Count,
-                    Loaded = ReplayService.IsLoaded, Compatible = ReplayService.CompatibilityReady,
+                    Loaded = ReplayService.IsLoaded,
                     Paused = replay?.TargetSpeed == 0, Failed = ReplayService.HasReplayFailure,
-                    Recovering = SnapshotResyncService.Active, Recovery = SnapshotResyncService.StatusDescription,
                     Transport = current is TimberClient guest ? guest.TransportName : "Host",
                     Tick = replay?.TicksSinceLoad ?? 0, Rate = rate.Rate,
                     BufferedTicks = current?.TicksBehind ?? 0, ReceivedEvents = current?.BufferedEventCount ?? 0,

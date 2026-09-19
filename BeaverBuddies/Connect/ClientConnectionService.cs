@@ -1,4 +1,4 @@
-﻿using BeaverBuddies.IO;
+using BeaverBuddies.IO;
 using BeaverBuddies.Steam;
 using BeaverBuddies.Util;
 using Steamworks;
@@ -28,26 +28,22 @@ namespace BeaverBuddies.Connect
         private ClientEventIO client;
         private Settings _settings;
         static Func<ISocketStream> reconnectSocket;
-        static string reconnectToken;
-        double nextReconnect;
-        bool snapshotAttempt;
         DialogBox progress;
         double nextProgress;
         bool steamConnection;
         void HideProgress() { var old = progress; progress = null; old?.Close(); }
         public void ReconnectOriginal()
         {
-            if (reconnectSocket != null) { reconnectToken = null; TryToConnect(reconnectSocket()); ShowConnectionMessage(true); }
+            // Manual retry uses the original transport; Steam never falls back to a saved IP.
+            if (steamConnection)
+            {
+                _dialogBoxShower.Create().SetMessage("Ask the host to save and rehost, then accept a new Steam invite.").SetDefaultCancelButton().Show();
+                return;
+            }
+            if (reconnectSocket != null) ShowConnectionMessage(TryToConnect(reconnectSocket()));
             else ConnectOrShowFailureMessage();
         }
         static double Now => (double)System.Diagnostics.Stopwatch.GetTimestamp() / System.Diagnostics.Stopwatch.Frequency;
-        public void BeginSnapshotReconnect()
-        {
-            client?.Close(); client = null;
-            snapshotAttempt = false; nextReconnect = Now + 1;
-        }
-
-
         public ClientConnectionService(
             GameSceneLoader gameSceneLoader,
             GameSaveRepository gameSaveRepository,
@@ -65,7 +61,6 @@ namespace BeaverBuddies.Connect
 
         public bool TryToConnect(CSteamID friendID)
         {
-            reconnectToken = null;
             reconnectSocket = () => new SteamRelaySocket(friendID);
             return TryToConnect(reconnectSocket());
         }
@@ -110,7 +105,6 @@ namespace BeaverBuddies.Connect
                 }
             }
 
-            reconnectToken = null;
             reconnectSocket = () => new TCPClientWrapper(address, port);
             return TryToConnect(reconnectSocket());
         }
@@ -124,20 +118,19 @@ namespace BeaverBuddies.Connect
             attempt = ClientEventIO.Create(socket, LoadMap, (error) =>
             {
                 if (attempt != null && attempt != EventIO.Get()) return;
-                if (SnapshotResyncService.Active)
+                HideProgress();
+                var replay = SingletonManager.GetSingleton<ReplayService>();
+                if (ReplayService.IsLoaded && replay != null)
                 {
-                    snapshotAttempt = false; nextReconnect = Now + 2;
-                    SnapshotResyncService.ConnectionFailed(error);
-                }
-                else
-                {
-                    HideProgress();
-                    if (steamConnection) _dialogBoxShower.Create().SetMessage("Could not join through Steam.\n\n" + error + "\n\nCheck both games use the same mod build and ask the host for another invite.").SetDefaultCancelButton().Show();
-                    else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
-                    if (attempt != null && attempt == EventIO.Get()) EventIO.Reset();
+                    replay.HandleConnectionLost(error);
                     SteamGuestLobby.Leave();
+                    return;
                 }
-            }, reconnectToken);
+                if (steamConnection) _dialogBoxShower.Create().SetMessage("Could not join through Steam.\n\n" + error + "\n\nAsk the host for another invite.").SetDefaultCancelButton().Show();
+                else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error);
+                if (attempt != null && attempt == EventIO.Get()) EventIO.Reset();
+                SteamGuestLobby.Leave();
+            });
             client = attempt;
 
             if (client == null)
@@ -230,8 +223,6 @@ namespace BeaverBuddies.Connect
                 // Clean up our current co-op state before loading,
                 // so we don't, for example, end up ticking the client before
                 // it's actually loaded.
-                reconnectToken = client.NetBase?.ReconnectToken;
-                if (!SnapshotResyncService.MapLoading(client, mapBytes)) return;
                 SingletonManager.Reset();
 
                 Plugin.Log("Loading map");
@@ -249,8 +240,8 @@ namespace BeaverBuddies.Connect
             catch (Exception error)
             {
                 Plugin.LogError("Could not load the host snapshot: " + error);
-                if (SnapshotResyncService.Active) SnapshotResyncService.ConnectionFailed(error.Message, false);
-                else ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error.Message);
+                client?.Close(); EventIO.Reset(); SteamGuestLobby.Leave();
+                ShowError("BeaverBuddies.JoinCoopGame.Error.CouldNotConnect", error.Message);
             }
         }
 
@@ -261,21 +252,6 @@ namespace BeaverBuddies.Connect
                 nextProgress = Now + .25;
                 if (client?.NetBase == null || client != EventIO.Get()) HideProgress();
                 else progress.GetPanel().Q<Label>("Message").text = client.NetBase.ConnectionStatus;
-            }
-            if (SnapshotResyncService.IsReconnecting && !snapshotAttempt && Now >= nextReconnect)
-            {
-                snapshotAttempt = true;
-                try
-                {
-                    if (reconnectSocket == null) throw new InvalidOperationException("Original host address is unavailable. Join the host manually.");
-                    if (steamConnection) SteamGuestLobby.Rejoin();
-                    if (!TryToConnect(reconnectSocket())) { snapshotAttempt = false; nextReconnect = Now + 2; }
-                }
-                catch (Exception error)
-                {
-                    snapshotAttempt = false; nextReconnect = Now + 2;
-                    Plugin.LogWarning("Snapshot reconnect attempt failed: " + error.Message);
-                }
             }
             if (client == null || client != EventIO.Get()) return;
             //Plugin.Log("Updating client!");

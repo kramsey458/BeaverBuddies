@@ -1,5 +1,14 @@
 # Stability previews: cumulative changelog
 
+## Preview 16 — Simplified multiplayer sessions
+
+- Remove automatic and menu-triggered host snapshot resync, pause/reconnect grace, session tickets and automatic retries.
+- Remove full mod/file/settings compatibility scans, profile exchanges and post-load compatibility admission. Keep the original game/mod version warning and Steam wire-protocol check.
+- Preserve Steam relay invites, direct IP, ordered sending, player activity, rolling diagnostics, status-panel controls and prior simulation/input/localization fixes.
+- Guest disconnects leave the host running. A disconnected guest pauses and gets a clear message. Desync recovery uses manual save-and-rehost; Steam guests accept a fresh invite.
+- Both players must update. Full configuration equality is now their responsibility.
+
+
 ## Preview 15 UI hotfix — 1.1.0-stability.15-ui.1
 
 - Fix overlapping status-panel text with explicit label and row sizing.

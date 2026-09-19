@@ -7,23 +7,6 @@ static class Preview5Checks
     static void Check(bool value) { if (!value) throw new Exception("assertion failed"); }
     public static IEnumerable<(string Name, Action Run)> Tests()
     {
-        yield return ("Matching builds complete handshake before map transfer", () => Session("same", "same", true));
-        yield return ("Mismatched builds never request or deliver the map", () => Session("old-build", "new-build", false));
-        yield return ("New client rejects legacy map before loading", () =>
-        {
-            var client = new TimberClient(new ReadStream(new byte[] {0,0,0,4,1,2,3,4})) { CompatibilityIdentity = "new" };
-            bool map = false; string error = "";
-            client.OnMapReceived += _ => map = true; client.OnError += x => error = x;
-            client.Start(); Check(SpinWait.SpinUntil(() => client.IsStopped, 1000)); client.Update();
-            Check(!map && error.Contains("older"));
-        });
-        yield return ("Legacy client sees an upgrade error rather than a fake map", () => Session("new", null, false));
-        yield return ("Silent handshake peer times out and releases reader", () =>
-        {
-            var (a,b) = PipeStream.Pair();
-            var task = Task.Run(() => { try { CompatibilityHandshake.Run(a, "x", true, 100); return false; } catch (IOException) { return true; } });
-            Check(task.Wait(1500) && task.Result); b.Close();
-        });
         yield return ("Client replay failure notifies host on update thread", () => Session("same", "same", true, true));
         yield return ("Host replay failure reaches client before disconnect cleanup", () => Session("same", "same", true, false, true));
         yield return ("Replay stops after partial mutation and restores flag", () =>
@@ -54,8 +37,8 @@ static class Preview5Checks
         var listener = new PipeListener(hostStream);
         int requests = 0, maps = 0, errors = 0, faults = 0;
         var host = new TimberServer(listener, () => { Interlocked.Increment(ref requests); return Task.FromResult(new byte[] {7,8,9}); }, null)
-            { CompatibilityIdentity = hostIdentity };
-        var client = new TimberClient(clientStream) { CompatibilityIdentity = clientIdentity };
+            ;
+        var client = new TimberClient(clientStream) ;
         client.OnMapReceived += bytes => { Check(bytes.SequenceEqual(new byte[] {7,8,9})); maps++; };
         client.OnError += _ => errors++;
         host.OnSessionFault += _ => { faults++; host.AbortSession("test"); };

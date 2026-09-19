@@ -24,8 +24,8 @@ namespace BeaverBuddies.Status
     }
     public sealed class StatusFacts
     {
-        public bool Host, Connected, Loaded, Compatible, Paused, Failed, Recovering;
-        public string Recovery = "", Transport = "Direct IP";
+        public bool Host, Connected, Loaded, Paused, Failed;
+        public string Transport = "Direct IP";
         public int Tick, BufferedTicks, ReceivedEvents, QueuedMessages, ConnectedPeers;
         public long QueuedBytes;
         public double? Rate;
@@ -49,9 +49,8 @@ namespace BeaverBuddies.Status
                 Peers = f.Peers.Take(8).Select(p => DescribePeer(f.Host, p)).ToArray()
             };
             if (f.Failed) { result.State = "Session stopped"; result.Hint = "Reload or rehost before continuing."; result.Warning = true; }
-            else if (f.Recovering) { result.State = "Recovering"; result.Hint = f.Recovery; }
             else if (!f.Connected) { result.State = "Disconnected"; result.Hint = "No active multiplayer connection."; result.Warning = true; }
-            else if (!f.Loaded || !f.Compatible) { result.State = "Checking mods"; result.Hint = "Waiting for map load and compatibility checks."; }
+            else if (!f.Loaded) { result.State = "Loading"; result.Hint = "Waiting for the map to finish loading."; }
             else if (f.Host && f.ConnectedPeers == 0) { result.State = "No guests connected"; result.Hint = "No remote player is connected."; }
             else if (f.Peers.Any(p => !p.Fresh)) { result.State = "Waiting for response"; result.Hint = "Peer may be loading, busy, or delayed by the connection."; result.Warning = true; }
             else if (f.QueuedBytes >= 256 * 1024 || fresh.Any(p => p.RoundTripMilliseconds >= 250))
@@ -64,7 +63,7 @@ namespace BeaverBuddies.Status
             { result.State = "Guest behind"; result.Hint = "A guest is behind in the latest sample; compare its tick rate below."; result.Warning = true; }
             else if (!f.Host && fresh.Any(p => p.Simulation?.Loaded == true && !p.Simulation.Paused && p.Simulation.Rate == 0))
             { result.State = "Host not advancing"; result.Hint = "Host replied, but reported no simulation progress in its last sample."; result.Warning = true; }
-            if (!f.Connected || f.Failed || f.Recovering)
+            if (!f.Connected || f.Failed)
             { result.Latency = "—"; result.Simulation = "—"; result.Outgoing = "—"; result.Incoming = "—"; result.Peers = Array.Empty<string>(); }
             else if (f.Host && f.ConnectedPeers == 0) result.Latency = "—";
             if (result.Peers.Length == 8 && f.Peers.Count > 8)

@@ -68,9 +68,9 @@ var tests = new (string Name, Action<World> Run)[]
         w.Step(); w.Receive(); Check(w.Net.Sent.Count==count && !w.Service.RemotePlayers.Any());
         Settings.PlayerActivityEnabled=true; w.Step(); Check(w.Net.Sent.Count==count+1);
     }),
-    ("Recovery suppresses activity until the session is ready", w =>
+    ("Session failure clears player activity", w =>
     {
-        w.Receive(); SnapshotResyncService.Active=true; w.Step(); w.Receive();
+        w.Receive(); ReplayService.HasReplayFailure=true; w.Step(); w.Receive();
         Check(!w.Service.RemotePlayers.Any() && w.Last.Selection=="");
     }),
     ("Only local edits show an editing badge, expiring after three seconds", w =>
@@ -119,7 +119,7 @@ sealed class World : IDisposable
     {
         Time.unscaledTime=0; Application.isFocused=true; Settings.PlayerActivityEnabled=true;
         ReplayService.IsLoaded=true; ReplayService.HasReplayFailure=false; ReplayService.IsReplayingEvents=false;
-        SnapshotResyncService.Active=false; DeterminismService.IsTicking=false;
+        ReplayService.HasReplayFailure=false; DeterminismService.IsTicking=false;
         Entity.Components[typeof(EntityComponent)]=Entity; Entity.Components[typeof(Building)]=new Building();
         Entity.Components[typeof(HighlightableObject)]=new HighlightableObject();
         var selected=new SelectableObject {Components=Entity.Components};

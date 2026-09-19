@@ -1,46 +1,6 @@
-# Mod compatibility and rolling diagnostics
+# Rolling desync diagnostics
 
-Available in **Preview 11 (1.1.0-stability.11)**. Install the same compiled archive
-on every computer and restart Timberborn before joining.
-
-## What is checked
-
-Before transferring the map, peers compare:
-
-- Timberborn and BeaverBuddies versions, including the module IDs of the loaded
-  BeaverBuddies and TimberNet assemblies.
-- Every enabled mod's manifest ID, version and load order.
-- SHA-256 fingerprints of each enabled mod's DLL, JSON, asset bundle, CFG, INI
-  and TOML files. Workshop presentation metadata is excluded. File paths are
-  relative to each mod, so different installation folders are fine.
-- Module IDs of matching assemblies actually loaded in the process. Timberborn
-  loads DLL bytes, so this check does not depend on `Assembly.Location`.
-- Registered Mod Settings values, hashed before they are sent. Mismatch messages
-  identify the mod/setting key; they do not disclose its value.
-
-Some mods register settings only in the game scene. After both maps load, a second
-check compares the complete registered setting set. Simulation and local replayed
-actions wait until this passes. A guest who loads first may wait for the host to
-choose **Start game**. A waiting dialog explains this; the check times out after
-ten minutes from the local map load.
-
-Known BeaverBuddies preferences such as address/port, player name/color, activity,
-logging, reporting consent and rolling diagnostics are local and excluded. The
-host's recovery preference is also allowed to differ. Detailed trace mode is
-checked because it changes replay traffic. Other mods' registered settings are
-strictly compared, including their cosmetic options: matching those options avoids
-guessing which third-party preferences affect simulation.
-
-Profiles are captured at connection and map initialization, including automatic
-snapshot reloads. Change other mods' gameplay settings in the main menu and rehost;
-this is not a system for synchronizing live settings changes. Custom settings
-registered without public properties use their registration ordinal as an identity.
-
-This is a configuration equality check, not a certification that every third-party
-mod is deterministic. Unregistered settings stored elsewhere, external data, and
-unlisted file formats cannot be discovered generically. A mod can still have a
-multiplayer bug when its versions and settings match. Fingerprinting runs during
-join/load, with unchanged file hashes cached; it does not scan files every tick.
+Preview 16 removes full mod compatibility scans and join/load admission checks. Keep game versions, gameplay mods and settings aligned manually. The local rolling recorder remains.
 
 ## Automatic local reports
 
@@ -64,10 +24,10 @@ after parallel work has finished. It never draws RNG values, edits the world,
 changes command hashes or automatically decides that the world has desynced.
 An error disables the recorder for that scene rather than failing multiplayer.
 
-On a desync, replay failure or snapshot recovery request, a small control notice
+On a desync, replay failure or connection loss, a small control notice
 asks connected peers to export their own history. Each scene exports at most once.
 Compression and disk writing run in the background; pending writes are bounded.
-Recovery can reload the map without erasing the captured report. If the connection
+Manual rehosting does not erase the captured report. If the connection
 is already broken, a peer notice may not arrive, so collect any available reports
 and both players' logs. Sudden process crashes cannot guarantee a report.
 

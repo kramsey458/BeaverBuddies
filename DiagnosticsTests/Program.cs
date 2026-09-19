@@ -16,44 +16,8 @@ int passed=0,failed=0;
 void Check(bool condition,string reason="assertion failed") {if(!condition)throw new Exception(reason);}
 void Test(string name,Action action) {try {action();passed++;Console.WriteLine("PASS "+name);}catch(Exception e){failed++;Console.WriteLine("FAIL "+name+": "+e.GetBaseException().Message);}}
 string root=Path.Combine(Path.GetTempPath(),"bb-diagnostics-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
-var repository=new ModRepository();var owners=new ModSettingsOwnerRegistry();
-Mod AddMod(string id){var mod=new Mod();mod.Manifest.Id=id;mod.ModDirectory.Path=Path.Combine(root,id);Directory.CreateDirectory(mod.ModDirectory.Path);repository.EnabledMods.Add(mod);return mod;}
-var own=AddMod(Plugin.ID);var housing=AddMod("housing");var owner=new SampleSettings();owners.Owners[housing]=new(){owner};owners.Owners[own]=new(){new SampleSettings()};
-var compatibility=new BuildCompatibility(repository,owners);compatibility.Load();
 try
 {
-    Test("Profile scans enabled mods, preserves load order and reads registered game settings",()=>{
-        var entries=CompatibilityProfile.Parse(BuildCompatibility.CreateIdentity());
-        Check(entries["order/0001"]=="housing" && entries["mod/housing"]=="1");
-        Check(entries.Keys.Any(k=>k.EndsWith("/Capacity")) && !entries.Keys.Any(k=>k.StartsWith("setting/beaverbuddies/")));
-        Check(!entries.Keys.Any(k=>k.EndsWith("/Button")));
-    });
-    Test("Profile notices modified and newly added configuration files",()=>{
-        string before=BuildCompatibility.CreateIdentity();File.WriteAllText(Path.Combine(housing.ModDirectory.Path,"config.json"),"{\"n\":1}");
-        string added=BuildCompatibility.CreateIdentity();Check(CompatibilityProfile.Difference(before,added,true).Contains("files/housing"));
-        File.WriteAllText(Path.Combine(housing.ModDirectory.Path,"config.json"),"{\"n\":100}");Check(CompatibilityProfile.Difference(added,BuildCompatibility.CreateIdentity(),true)!=null);
-    });
-    Test("Profile fingerprints loaded assembly modules as well as disk files",()=>{
-        string path=Path.Combine(housing.ModDirectory.Path,"TimberNet.dll");File.Copy(typeof(TimberNetBase).Assembly.Location,path);
-        var entries=CompatibilityProfile.Parse(BuildCompatibility.CreateIdentity());Check(entries["code/housing/TimberNet.dll"].Contains(typeof(TimberNetBase).Module.ModuleVersionId.ToString("D")));
-    });
-    Test("Setting values are hashed and culture independent",()=>{
-        var previous=CultureInfo.CurrentCulture;
-        try {CultureInfo.CurrentCulture=CultureInfo.GetCultureInfo("en-US");string first=BuildCompatibility.CreateIdentity();CultureInfo.CurrentCulture=CultureInfo.GetCultureInfo("de-DE");Check(first==BuildCompatibility.CreateIdentity());Check(!first.Contains("private text"));}
-        finally{CultureInfo.CurrentCulture=previous;}
-    });
-    Test("Gameplay settings differ while local diagnostics preferences do not",()=>{
-        string before=BuildCompatibility.CreateIdentity();Settings.RollingDiagnosticsEnabled=false;Check(before==BuildCompatibility.CreateIdentity());Settings.RollingDiagnosticsEnabled=true;
-        owner.Capacity.Value=7;Check(CompatibilityProfile.Difference(before,BuildCompatibility.CreateIdentity(),true).Contains("Capacity"));
-    });
-    Test("Detailed trace mode is checked because it changes replay traffic",()=>{
-        string before=BuildCompatibility.CreateIdentity();Settings.Debug=true;Check(CompatibilityProfile.Difference(before,BuildCompatibility.CreateIdentity(),true).Contains("session/detailedTracing"));Settings.Debug=false;
-    });
-    Test("Unsupported registered setting fails visibly instead of silently skipping",()=>{
-        owner.ModSettings.Add(new ModSetting<DateTime>{Value=DateTime.UtcNow}); // IFormattable is supported, but duplicate custom IDs remain explicit
-        owner.ModSettings.Add(new ModSetting<object>{Value=new object()});
-        bool threw=false;try{BuildCompatibility.CreateIdentity();}catch(IOException){threw=true;}Check(threw);owner.ModSettings.RemoveRange(owner.ModSettings.Count-2,2);
-    });
     Test("Rolling sampler reads bounded windows without altering water, inventory or RNG",()=>{
         var fixture=Fixture();var recorder=fixture.Recorder;var rng=UnityEngine.Random.state;
         RollingDiagnosticsService.CaptureBoundary(0);RollingDiagnosticsService.CaptureBoundary(0);RollingDiagnosticsService.CaptureBoundary(1);RollingDiagnosticsService.CaptureBoundary(20);

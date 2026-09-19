@@ -21,12 +21,12 @@ static class TcpRecoveryChecks
                 {
                     initThread=Environment.CurrentManagedThreadId;
                     return new JObject { ["type"]="InitializeClient", ["ticksSinceLoad"]=0 };
-                }) { CompatibilityIdentity="preview9" };
+                }) ;
                 TimberClient client=null;
                 try
                 {
                     host.Start(); port=listener.Port;
-                    client=new TimberClient(new TCPClientWrapper("127.0.0.1",port)) { CompatibilityIdentity="preview9" };
+                    client=new TimberClient(new TCPClientWrapper("127.0.0.1",port)) ;
                     byte[] received=null; int errors=0;
                     client.OnMapReceived+=bytes=>received=bytes; client.OnError+=_=>errors++;
                     client.Start(); Until(()=> { host.Update(); client.Update(); return received!=null; });

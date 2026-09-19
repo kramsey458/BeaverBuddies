@@ -99,7 +99,6 @@ namespace BeaverBuddies.Steam
 
         void Join(CSteamID lobby)
         {
-            if (SnapshotResyncService.Active) return;
             if (!EventIO.IsNull)
             {
                 pendingError = "You are already in a multiplayer session. Return to the main menu before accepting a different invite.";
@@ -125,12 +124,12 @@ namespace BeaverBuddies.Steam
             pendingLobby = default; joinDeadline = 0;
             if (entered.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
             { pendingError = "The Steam lobby could not be joined. It may have closed or become full. Ask the host for a fresh invite."; return; }
-            if (SnapshotResyncService.Active || !EventIO.IsNull) { SteamMatchmaking.LeaveLobby(lobby); return; }
+            if (!EventIO.IsNull) { SteamMatchmaking.LeaveLobby(lobby); return; }
             var owner = SteamMatchmaking.GetLobbyOwner(lobby);
             if (owner.m_SteamID == 0 || SteamMatchmaking.GetLobbyData(lobby, "beaverbuddies_protocol") != SteamListener.Protocol)
             {
                 SteamMatchmaking.LeaveLobby(lobby);
-                pendingError = "This Steam invite uses a different BeaverBuddies networking version. Install the same Preview 14 or newer build on both computers and restart Timberborn.";
+                pendingError = "This Steam invite uses a different BeaverBuddies networking version. Install the same Preview 16 or newer build on both computers and restart Timberborn.";
                 return;
             }
             SteamGuestLobby.Set(lobby);

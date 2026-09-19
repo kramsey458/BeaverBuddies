@@ -19,10 +19,8 @@ namespace TimberNet
         private readonly List<ISocketStream> clients = new List<ISocketStream>();
         readonly ConcurrentDictionary<ISocketStream, int> activityIds = new ConcurrentDictionary<ISocketStream, int>();
         int nextActivityId;
-        protected override bool ConnectionKeepAliveEnabled => ReconnectTickets != null;
-        public ReconnectTickets? ReconnectTickets { get; set; }
-        public event Action<ISocketStream>? OnPeerDisconnected;
-        readonly ConcurrentQueue<ISocketStream> disconnected = new ConcurrentQueue<ISocketStream>();
+        public bool KeepAliveEnabled { get; set; }
+        protected override bool ConnectionKeepAliveEnabled => KeepAliveEnabled;
 
         protected override void QueueActivity(ISocketStream stream, PlayerActivity activity)
         {
@@ -49,7 +47,6 @@ namespace TimberNet
         protected override void HandleConnectionFailure(ISocketStream stream, string message)
         {
             activityIds.TryRemove(stream, out _);
-            if (ReconnectTickets?.Release(stream) == true && !IsStopped) disconnected.Enqueue(stream);
             base.HandleConnectionFailure(stream, message);
         }
         private readonly ConcurrentDictionary<ISocketStream, ConcurrentQueue<string>> queuedMessages =
@@ -61,17 +58,15 @@ namespace TimberNet
         {
             while (completedJoins.TryDequeue(out var complete)) complete();
             base.Update();
-            if (ReconnectTickets != null && !IsStopped)
+            if (ConnectionKeepAliveEnabled && !IsStopped)
                 foreach (var peer in GetConnections())
-                    if (CompatibilityVerified) CheckConnectionSilence(peer); else RefreshConnectionSilence(peer);
-            while (disconnected.TryDequeue(out var peer)) if (!IsStopped) OnPeerDisconnected?.Invoke(peer);
+                    CheckConnectionSilence(peer);
         }
 
         private Func<Task<byte[]>> mapProvider;
         private Func<JObject>? initEventProvider;
 
         public ISocketStream[] GetConnections() { lock (queuedMessages) return clients.Where(c => c.Connected).ToArray(); }
-        protected override IEnumerable<object> AdmissionPeers => GetConnections();
         protected override IEnumerable<(ISocketStream Peer, string Label)> TelemetryPeers
         {
             get { lock (queuedMessages) return clients.Where(c => c.Connected && !queuedMessages.ContainsKey(c))
@@ -146,9 +141,7 @@ namespace TimberNet
                                 return;
                             }
 
-                            if (CompatibilityIdentity != null) CompatibilityHandshake.Run(client, CompatibilityIdentity, true);
                             if (IsStopped || !IsAcceptingClients) { client.Close(); return; }
-                            if (ReconnectTickets != null) ReconnectHandshake.Host(client, ReconnectTickets, IsAcceptingClients);
                             await SendMap(client);
                             var initialized = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                             completedJoins.Enqueue(() =>
@@ -162,7 +155,6 @@ namespace TimberNet
                                         SendState(client);
                                         if (initEventProvider != null) DoUserInitiatedEvent(initEventProvider());
                                     }
-                                    ReconnectTickets?.Activate(client);
                                     initialized.TrySetResult(true);
                                 }
                                 catch (Exception error) { initialized.TrySetException(error); }
@@ -189,7 +181,7 @@ namespace TimberNet
         {
             lock (queuedMessages)
             {
-                if (IsStopped || (!IsAcceptingClients && !(ReconnectTickets?.IsRecovery == true && ReconnectTickets.HasClaim(client)))) { client.Close(); throw new IOException("Session closed to new joins."); }
+                if (IsStopped || !IsAcceptingClients) { client.Close(); throw new IOException("Session closed to new joins."); }
                 queuedMessages.TryAdd(client, new ConcurrentQueue<string>());
                 clients.Add(client);
                 activityIds.TryAdd(client, System.Threading.Interlocked.Increment(ref nextActivityId));

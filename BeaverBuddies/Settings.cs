@@ -1,4 +1,4 @@
-﻿using ModSettings.Common;
+using ModSettings.Common;
 using ModSettings.Core;
 using Timberborn.Modding;
 using Timberborn.SettingsSystem;
@@ -69,14 +69,6 @@ namespace BeaverBuddies
                 .SetLocalizedTooltip("BeaverBuddies.Settings.PauseReduction.Tooltip")
         );
 
-        public ModSetting<bool> AutomaticSnapshotResync { get; } =
-            new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.AutomaticSnapshotResync")
-                .SetLocalizedTooltip("BeaverBuddies.Settings.AutomaticSnapshotResync.Tooltip"));
-        public ModSetting<bool> ReconnectGracePeriod { get; } =
-            new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.ReconnectGracePeriod")
-                .SetLocalizedTooltip("BeaverBuddies.Settings.ReconnectGracePeriod.Tooltip"));
-        public static bool ReconnectGraceEnabled => instance?.ReconnectGracePeriod.Value ?? true;
-        public static bool SnapshotResyncEnabled => instance?.AutomaticSnapshotResync.Value ?? true;
         public ModSetting<bool> PlayerActivity { get; } =
             new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.PlayerActivity")
                 .SetLocalizedTooltip("BeaverBuddies.Settings.PlayerActivity.Tooltip"));

@@ -23,14 +23,13 @@ namespace BeaverBuddies.IO
         private bool FailedToConnect = false;
 
         private ClientEventIO(ISocketStream socket, MapReceived mapReceivedCallback,
-            Action<string> onError, string reconnectToken)
+            Action<string> onError)
         {
             this.mapReceivedCallback = mapReceivedCallback;
 
 
-            NetBase = new TimberClient(socket) { CompatibilityIdentity = BuildCompatibility.CreateIdentity(), UseReconnectHandshake = true, ReconnectToken = reconnectToken };
+            NetBase = new TimberClient(socket) { KeepAliveEnabled = true };
             NetBase.DetailedLoggingEnabled = () => Settings.Debug && Settings.VerboseLogging;
-            NetBase.OnControl += (peer, message) => BeaverBuddies.Connect.SnapshotResyncService.Receive(this, peer, message);
             NetBase.OnControl += (peer, message) => BeaverBuddies.DesyncDetecter.RollingDiagnosticsService.Receive(this, message);
             NetBase.OnSessionFault += reason => SingletonManager.GetSingleton<ReplayService>()?.AbortReplay(reason);
             NetBase.OnMapReceived += mapReceivedCallback;
@@ -38,10 +37,9 @@ namespace BeaverBuddies.IO
             NetBase.OnError += (error) =>
             {
                 Plugin.LogError(error);
-                bool recovering = BeaverBuddies.Connect.SnapshotResyncService.TryConnectionLost(this, NetBase);
                 CleanUp();
                 FailedToConnect = true;
-                if (!recovering && !ReplayService.HasReplayFailure) onError(error);
+                if (!ReplayService.HasReplayFailure) onError(error);
             };
             try
             {
@@ -65,18 +63,18 @@ namespace BeaverBuddies.IO
             NetBase = null;
         }
 
-        public static ClientEventIO Create(ISocketStream socket, MapReceived mapReceivedCallback, Action<string> onError, string reconnectToken = null)
+        public static ClientEventIO Create(ISocketStream socket, MapReceived mapReceivedCallback, Action<string> onError)
         {
             try
             {
-                ClientEventIO eventIO = new ClientEventIO(socket, mapReceivedCallback, onError, reconnectToken);
+                ClientEventIO eventIO = new ClientEventIO(socket, mapReceivedCallback, onError);
                 if (eventIO.FailedToConnect) return null;
                 return eventIO;
             }
             catch (Exception error)
             {
                 socket.Close();
-                onError("Could not verify installed mods: " + error.Message);
+                onError("Could not connect: " + error.Message);
                 Plugin.LogError(error.ToString());
                 return null;
             }

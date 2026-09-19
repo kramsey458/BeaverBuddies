@@ -110,7 +110,7 @@ namespace BeaverBuddies.Activity
                 ClearRemote(); net = current; editingId = ""; nextSend = 0;
                 if (net != null) net.OnActivity += Receive;
             }
-            bool hide = !Settings.PlayerActivityEnabled || !ReplayService.IsLoaded || ReplayService.HasReplayFailure || SnapshotResyncService.Active;
+            bool hide = !Settings.PlayerActivityEnabled || !ReplayService.IsLoaded || ReplayService.HasReplayFailure;
             if (net == null || net.IsStopped || hide)
             {
                 ClearRemote();
@@ -178,7 +178,7 @@ namespace BeaverBuddies.Activity
         }
         void Receive(PlayerActivity state)
         {
-            if (!loaded || failed || !ReplayService.IsLoaded || !Settings.PlayerActivityEnabled || SnapshotResyncService.Active || ReplayService.HasReplayFailure) return;
+            if (!loaded || failed || !ReplayService.IsLoaded || !Settings.PlayerActivityEnabled || ReplayService.HasReplayFailure) return;
             try
             {
                 if (!remote.TryGetValue(state.PlayerId, out var player))

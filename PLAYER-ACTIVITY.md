@@ -43,7 +43,7 @@ still relays other guests' activity.
   colors and names are validated. Activity that aged out during scene loading is
   dropped. No per-frame scene scans or gameplay random calls are used.
 - Remote displays expire after three seconds without updates. Reload, session change,
-  recovery, disable and disconnect clear local overlays/highlights. Missing/deleted
+  session failure, disable and disconnect clear local overlays/highlights. Missing/deleted
   entities are ignored. The feature creates no selectable objects or input controls.
 
 ## Validation
@@ -54,10 +54,10 @@ relay at tick zero without hash changes.
 
 `dotnet run --project ActivityTests` compiles the production activity service against
 controlled Unity/game boundaries to test cursor picking, UI/focus behavior, sampling,
-highlight ownership, editing expiry, stale peers, settings, reload and recovery.
+highlight ownership, editing expiry, stale peers, settings, reload and session failure.
 These doubles cannot prove native visual output or game container initialization.
 
-The compiled mod must also pass RuntimeChecks, SnapshotChecks and the Python water
+The compiled mod must also pass RuntimeChecks and the Python water
 checks. A two-player Unity playtest remains necessary:
 
 1. Install the exact same latest preview ZIP on every computer and restart. Confirm

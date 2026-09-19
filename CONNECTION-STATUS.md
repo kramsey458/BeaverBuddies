@@ -13,7 +13,7 @@ It appears only in a multiplayer-loaded scene.
   **Collapse connection status** controls the remembered compact view.
 
 Visibility and collapse choices are saved locally and survive rehosting/restarts.
-They are excluded from the mod compatibility check. No keyboard shortcut is added.
+No keyboard shortcut is added.
 The panel is attached to the normal HUD, not an input overlay over the whole screen.
 Long peer lists scroll within a capped area; detailed rows show up to eight peers,
 with an explicit count of additional peers included in the response summary.
@@ -29,7 +29,7 @@ with an explicit count of additional peers included in the response summary.
 | Received | Events waiting locally; on a guest, also how many already-received host ticks are buffered. |
 | Peer rows | Response time, reported tick rate or pause/loading state, and approximate tick lag at the time of the reply. Uses connection IDs, not IP addresses. |
 
-The summary explains **Checking mods**, **Paused**, **Recovering**, **Catching up**,
+The summary explains **Loading**, **Paused**, **Catching up**,
 **Guest behind**, **Waiting for response**, **Connection delayed**, or disconnection.
 These are observations, not a claim to know the root cause of every stall.
 
@@ -42,7 +42,7 @@ These are observations, not a claim to know the root cause of every stall.
 - Peer lag is approximate because samples and packets arrive at different times.
   The host warning allows for sample cadence and transit time at higher tick rates.
 - Measurements older than five seconds are marked awaiting response, not shown as
-  current readings. Recovery and disconnection suppress obsolete metrics.
+  current readings. Disconnection suppresses obsolete metrics.
 
 ## Overhead and synchronization
 

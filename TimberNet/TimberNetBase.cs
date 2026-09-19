@@ -102,24 +102,7 @@ namespace TimberNet
             text => SendDataWithLength(socket, MessageToBuffer(text)),
             error => HandleConnectionFailure(socket, "Error sending event: " + error.Message)));
 
-        public string? CompatibilityIdentity { get; set; }
-        CompatibilityAdmission? admission;
-        DateTime? loadedAt;
-        public string? LoadedCompatibilityIdentity { get; private set; }
         public string? SnapshotDigest { get; protected set; }
-        public bool RequiresLoadedCompatibility => CompatibilityIdentity?.StartsWith("{", StringComparison.Ordinal) == true;
-        protected virtual IEnumerable<object> AdmissionPeers => Array.Empty<object>();
-        public bool CompatibilityVerified => !RequiresLoadedCompatibility || (admission?.Ready(AdmissionPeers) == true);
-        CompatibilityAdmission Admission => admission ??= new CompatibilityAdmission(this is TimberServer,
-            (peer, message) => { if (peer is ISocketStream stream) SendEvent(stream, message); else SendControl(message); },
-            reason => { OnSessionFault?.Invoke(reason); if (!IsStopped) AbortSession(reason); });
-        public void SubmitLoadedCompatibility(string identity)
-        {
-            if (!RequiresLoadedCompatibility) return;
-            loadedAt = DateTime.UtcNow;
-            LoadedCompatibilityIdentity = identity;
-            Admission.Loaded(identity);
-        }
         public Func<bool>? DetailedLoggingEnabled { get; set; }
         protected bool ShouldLogDetails => DetailedLoggingEnabled?.Invoke() == true;
         public event MessageReceived? OnSessionFault;
@@ -167,7 +150,7 @@ namespace TimberNet
 
         public bool Started { get; private set; }
 
-        public virtual bool ShouldTick => Started && !IsStopped && CompatibilityVerified;
+        public virtual bool ShouldTick => Started && !IsStopped;
 
         protected List<JObject> receivedEvents = new List<JObject>();
 
@@ -466,7 +449,6 @@ namespace TimberNet
                 {
                     if ((string?)control["command"] == "LeaveSession" && this is TimberServer leavingHost)
                     {
-                        leavingHost.ReconnectTickets?.Forget(client);
                         client.Close(); return;
                     }
                     controls.Enqueue((client, control));
@@ -598,14 +580,7 @@ namespace TimberNet
         {
             ProcessLogs();
             while (controls.TryDequeue(out var control))
-                if (!RequiresLoadedCompatibility || !Admission.Receive(control.Stream, control.Message)) OnControl?.Invoke(control.Stream, control.Message);
-            if (!IsStopped && loadedAt.HasValue && !CompatibilityVerified && DateTime.UtcNow - loadedAt.Value > TimeSpan.FromMinutes(10))
-            {
-                loadedAt = null;
-                const string reason = "Timed out waiting for all players to finish loading and verify mod settings. Rehost and try again.";
-                OnSessionFault?.Invoke(reason);
-                if (!IsStopped) AbortSession(reason);
-            }
+                OnControl?.Invoke(control.Stream, control.Message);
             while (sessionFaults.TryDequeue(out string? fault)) OnSessionFault?.Invoke(fault);
             // UI subscribers must only run on the caller's update thread.
             while (errorQueue.TryDequeue(out string? error)) OnError?.Invoke(error);
@@ -638,7 +613,7 @@ namespace TimberNet
             //if (ticksSinceLoad != TickCount) Log($"Setting ticks from {TickCount} to {ticksSinceLoad}");
             TickCount = ticksSinceLoad;
             Update();
-            if (IsStopped || !CompatibilityVerified) return new List<JObject>();
+            if (IsStopped) return new List<JObject>();
             List<JObject> toProcess = PopEventsToProcess(receivedEvents);
             toProcess.ForEach(e => ProcessReceivedEvent(e));
             return FilterEvents(toProcess);
