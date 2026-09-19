@@ -12,6 +12,21 @@ namespace BeaverBuddies
         NeverAutoPause = 2,
     }
 
+    public enum PanelDisplayMode
+    {
+        Expanded = 0,
+        Collapsed = 1,
+        Hidden = 2,
+    }
+
+    public enum PanelCorner
+    {
+        TopLeft = 0,
+        TopRight = 1,
+        BottomLeft = 2,
+        BottomRight = 3,
+    }
+
     public class Settings : ModSettingsOwner
     {
         public ModSetting<string> ClientConnectionAddress { get; } =
@@ -75,6 +90,27 @@ namespace BeaverBuddies
             new(true, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.PlayerActivity")
                 .SetLocalizedTooltip("BeaverBuddies.Settings.PlayerActivity.Tooltip"));
 
+        // ---- Connection Panel ----
+
+        public LimitedStringModSetting ConnectionPanelDisplay { get; } =
+            new(0, new[] {
+                new LimitedStringModSettingValue("0", "BeaverBuddies.Settings.ConnectionPanelDisplay.Expanded"),
+                new LimitedStringModSettingValue("1", "BeaverBuddies.Settings.ConnectionPanelDisplay.Collapsed"),
+                new LimitedStringModSettingValue("2", "BeaverBuddies.Settings.ConnectionPanelDisplay.Hidden")
+            }, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.ConnectionPanelDisplay")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.ConnectionPanelDisplay.Tooltip")
+        );
+
+        public LimitedStringModSetting ConnectionPanelCorner { get; } =
+            new(0, new[] {
+                new LimitedStringModSettingValue("0", "BeaverBuddies.Settings.ConnectionPanelCorner.TopLeft"),
+                new LimitedStringModSettingValue("1", "BeaverBuddies.Settings.ConnectionPanelCorner.TopRight"),
+                new LimitedStringModSettingValue("2", "BeaverBuddies.Settings.ConnectionPanelCorner.BottomLeft"),
+                new LimitedStringModSettingValue("3", "BeaverBuddies.Settings.ConnectionPanelCorner.BottomRight")
+            }, ModSettingDescriptor.CreateLocalized("BeaverBuddies.Settings.ConnectionPanelCorner")
+                .SetLocalizedTooltip("BeaverBuddies.Settings.ConnectionPanelCorner.Tooltip")
+        );
+
         // ---- Developer Settings ----
 
         public ModSetting<bool> AlwaysTrace { get; } =
@@ -130,6 +166,20 @@ namespace BeaverBuddies
         public static bool LobbyJoinable => instance?.FriendsCanJoinSteamGame.Value ?? true;
         public static bool ShouldShowFirstTimerMessage => instance?.ShowFirstTimerMessage.Value ?? true;
         public static bool PlayerActivityEnabled => instance?.PlayerActivity.Value ?? true;
+
+        public static PanelDisplayMode ConnectionPanelDisplayMode =>
+            ParseChoice(instance?.ConnectionPanelDisplay?.Value, PanelDisplayMode.Expanded);
+
+        public static PanelCorner ConnectionPanelCornerValue =>
+            ParseChoice(instance?.ConnectionPanelCorner?.Value, PanelCorner.TopLeft);
+
+        /// <summary>Saves the panel's state, so collapsing it from the panel itself is remembered.</summary>
+        public static void SetConnectionPanelDisplayMode(PanelDisplayMode mode) =>
+            instance?.ConnectionPanelDisplay.SetValue(((int)mode).ToString());
+
+        // Settings store the choice as its number; anything unrecognised falls back to the default.
+        private static T ParseChoice<T>(string value, T fallback) where T : struct, System.Enum =>
+            int.TryParse(value, out int number) && System.Enum.IsDefined(typeof(T), number) ? (T)(object)number : fallback;
 
         public static PauseReductionLevel PauseReductionSetting
         {

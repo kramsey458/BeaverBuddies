@@ -44,7 +44,14 @@ namespace BeaverBuddies.Connect
 
         public bool TryToConnect(CSteamID friendID)
         {
-            return TryToConnect(new SteamSocket(friendID));
+            // The connection is established in the background by Steam networking; see SteamLinkSocket.
+            var socket = SteamNet.Manager?.Connect(friendID.m_SteamID);
+            if (socket == null)
+            {
+                Plugin.LogError("Steam networking is not ready, so the host could not be reached.");
+                return false;
+            }
+            return TryToConnect(socket);
         }
 
         public bool TryToConnect(string address)
@@ -115,6 +122,12 @@ namespace BeaverBuddies.Connect
         public void ConnectOrShowFailureMessage(string address)
         {
             TryToConnect(address);
+        }
+
+        /// <summary>Shows the standard "could not join" dialog with a specific reason.</summary>
+        public void ShowJoinError(string reasonKey, string details = null)
+        {
+            ShowError(reasonKey, details);
         }
 
         public void ShowConnectionMessage(bool success)

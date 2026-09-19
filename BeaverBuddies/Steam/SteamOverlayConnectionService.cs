@@ -69,11 +69,13 @@ namespace BeaverBuddies.Steam
                     //Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
                     callbacks.Add(Callback<GameLobbyJoinRequested_t>.Create(OnLobbyJoinRequested));
                     callbacks.Add(Callback<LobbyEnter_t>.Create(OnLobbyEntered));
-                    callbacks.Add(Callback<P2PSessionRequest_t>.Create(OnP2PSessionRequest));
 
-                    //SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 4);
+                    // Start Steam networking (relay warm-up and the per-frame pump).
+                    try { SteamNet.Initialize(); }
+                    catch (Exception e) { Plugin.LogError("Steam networking could not start; Steam invites are unavailable: " + e.Message); }
 
                     TrySetPingName();
+                    TryJoinLaunchLobby();
                 }
                 else
                 {
@@ -106,33 +108,36 @@ namespace BeaverBuddies.Steam
             SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
         }
 
-        private void OnLobbyChatUpdate(LobbyChatUpdate_t callback)
-        {
-            Debug.Log("Lobby chat update: " + callback.m_ulSteamIDLobby);
-            if ((callback.m_rgfChatMemberStateChange & (uint)EChatMemberStateChange.k_EChatMemberStateChangeEntered) != 0)
-            {
-                CSteamID userJoined = new CSteamID(callback.m_ulSteamIDUserChanged);
-                string name = SteamFriends.GetFriendPersonaName(userJoined);
-                Debug.Log("User " + name + " has joined the lobby.");
-
-
-                //SteamNetworking.CreateP2PConnectionSocket(memberId, 0, )
-                string message = "Hello, beaver buddy!";
-                byte[] data = Encoding.UTF8.GetBytes(message);
-                SteamNetworking.SendP2PPacket(userJoined, data, (uint)data.Length, EP2PSend.k_EP2PSendReliable);
-            }
-        }
-
         private void OnLobbyInvite(LobbyInvite_t param)
         {
             string invitingUser = SteamFriends.GetFriendPersonaName(new CSteamID(param.m_ulSteamIDUser));
             Plugin.Log($"Invited to lobby {param.m_ulSteamIDLobby} by {invitingUser}");
         }
 
-        private void OnP2PSessionRequest(P2PSessionRequest_t callback)
+        private static bool launchLobbyHandled;
+
+        // If the invited friend did not have the game running, Steam launches it with "+connect_lobby <id>".
+        private void TryJoinLaunchLobby()
         {
-            CSteamID clientId = callback.m_steamIDRemote;
-            SteamNetworking.AcceptP2PSessionWithUser(clientId);
+            if (launchLobbyHandled) return;
+            launchLobbyHandled = true;
+            try
+            {
+                string[] args = Environment.GetCommandLineArgs();
+                for (int i = 0; i < args.Length - 1; i++)
+                {
+                    if (args[i] == "+connect_lobby" && ulong.TryParse(args[i + 1], out ulong lobbyId) && lobbyId != 0)
+                    {
+                        Plugin.Log($"Launched from a Steam invite; joining lobby {lobbyId}...");
+                        SteamMatchmaking.JoinLobby(new CSteamID(lobbyId));
+                        return;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.LogWarning("Could not read the Steam launch invite: " + e.Message);
+            }
         }
 
         // This should only be called if the SteamOverlayInputBlocker is on top,
@@ -164,9 +169,24 @@ namespace BeaverBuddies.Steam
         private void OnLobbyEntered(LobbyEnter_t callback)
         {
             ClearWaitForSteamOverlay();
-            var owner = SteamMatchmaking.GetLobbyOwner(new CSteamID(callback.m_ulSteamIDLobby));
+            var lobby = new CSteamID(callback.m_ulSteamIDLobby);
+            var owner = SteamMatchmaking.GetLobbyOwner(lobby);
             if (owner != SteamUser.GetSteamID())
             {
+                if (callback.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+                {
+                    Plugin.LogWarning($"Could not enter the host's Steam lobby (response {callback.m_EChatRoomEnterResponse}).");
+                    _clientConnectionService.ShowConnectionMessage(false);
+                    return;
+                }
+                if (SteamMatchmaking.GetLobbyData(lobby, SteamListener.OpenKey) == "0")
+                {
+                    // An old invite: the host already started, so nobody can join until they rehost.
+                    Plugin.Log("The host has already started the game; not connecting.");
+                    SteamMatchmaking.LeaveLobby(lobby);
+                    _clientConnectionService.ShowJoinError("BeaverBuddies.JoinCoopGame.Error.HostStarted");
+                    return;
+                }
                 Plugin.Log("Joining another's lobby...");
                 bool success = _clientConnectionService.TryToConnect(owner);
                 if (_panelStack.IsPanelOnTop(_inputBlocker))

@@ -10,6 +10,54 @@ Preview 4 was built against Timberborn 1.1.2.4.
 
 
 
+## 1.1.3 (pre-release) - Connection panel and Steam invites
+
+Built on 1.1.1. Includes the Steam relay invites first released as 1.1.2-steam.1 (see the entry
+below), so one build has both. See `CONNECTION-PANEL.md`.
+
+- Add a small HUD panel during multiplayer showing connected players, each player's ping
+  (green, yellow or red), whether you are in sync, the tick rate, game speed, how far a
+  guest is behind the host, and whether players are connected directly or through Steam.
+- It collapses to one line by clicking its title (remembered), and can be hidden from Mod
+  Settings or with an optional key. Its corner is a setting.
+- Ping is measured by the network layer (a probe once a second, answered on the guest's
+  network thread) so it works the same over Hamachi, direct IP and Steam. Probes and the
+  player roster use the separate presentation lane: never replayed, never hashed, never
+  sent to a guest that is still joining, and validated on arrival.
+- The panel docks into the game's own HUD layout, and only reads: it sends no gameplay
+  event, and if it fails it disables itself.
+- 87 StabilityTests and 55 RuntimeChecks pass; Release Steam and non-Steam builds succeed.
+  The panel's ping and roster feed is tested over the Steam transport as well as direct connections.
+  The panel's appearance and controls have **not** been seen in the running game.
+
+## 1.1.2-steam.1 (pre-release) - Steam relay invites
+
+Built on 1.1.1.
+
+- Replace the legacy `ISteamNetworking` P2P transport (deprecated by Valve) with
+  `ISteamNetworkingSockets`, so Steam friends can be invited from Steam's overlay without
+  Hamachi or port forwarding. It is offered alongside direct IP, not instead of it. See
+  `STEAM-INVITES.md`.
+- All Steam calls run on the game thread; TimberNet talks to Steam through queues. Writes
+  never block, and the connection completes in the background instead of inside the
+  3-second wait in `TimberClient.Start()`.
+- The host accepts only players who joined its Steam lobby. The lobby records whether the
+  host is still accepting players, so an old invite explains itself. A friend whose game was
+  closed joins through Steam's launch invite (`+connect_lobby`).
+- Raise Steam's send rate and buffer limits so the save transfer is not throttled. Every
+  connection failure, stall or timeout ends with an explanation that includes Steam's
+  own end reason, in the error dialog and in `Player.log`.
+- A Steam failure can no longer prevent hosting over direct IP.
+- TimberNet: transports can report why they failed and complete connecting in the
+  background (`IFailureDescriber`, `IConnectionAwaitable`).
+- 63 StabilityTests pass against a fake Steam network that fails any Steam call made off
+  the game thread; 55 RuntimeChecks pass; Release Steam and non-Steam builds succeed. Two
+  protocol-parity checks run one scripted session (about 60 events in each direction, one
+  of 220 KB, plus cursor traffic) over a direct connection and over Steam under stress, and
+  require both peers to end with identical events and state hashes; corrupting one byte in
+  the Steam path makes them fail. The layer that calls the real Steam client has **not** been
+  run against Steam and needs a two-account playtest.
+
 ## 1.1.1 — Preview 17
 
 Built on Preview 8. Previews 9-16 are deprecated and are not included. This is the

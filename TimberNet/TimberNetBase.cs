@@ -96,6 +96,17 @@ namespace TimberNet
             activityMailbox.Put(activity, ActivityMailbox.Now);
         }
 
+        // ---- Connection status feed (presentation only) ----
+        // Ping probes and the player roster share the activity lane: never replayed, never hashed.
+
+        protected virtual void HandleStatusFrame(ISocketStream source, string type, JObject message) { }
+
+        /// <summary>Called on the game thread from <see cref="Update"/> while the session is running.</summary>
+        protected virtual void OnUpdate() { }
+
+        /// <summary>A snapshot of who is connected and how well, for display.</summary>
+        public virtual NetworkStatus GetNetworkStatus() => NetworkStatus.None(IsStopped);
+
         protected ActivityChannel CreateActivityChannel(ISocketStream stream) =>
             new ActivityChannel(stream, WriteActivityFrame, HandleConnectionFailure);
 
@@ -258,9 +269,18 @@ namespace TimberNet
 
         protected virtual void HandleConnectionFailure(ISocketStream stream, string message)
         {
+            // Read the reason before closing: closing may replace it with a generic one.
+            message = DescribeFailure(stream, message);
             // After a partial write the framing cannot safely be reused.
             stream.Close();
             Log(message);
+        }
+
+        /// <summary>Adds the transport's own explanation (for example Steam's end reason), if it has one.</summary>
+        protected static string DescribeFailure(ISocketStream stream, string message)
+        {
+            string? reason = (stream as IFailureDescriber)?.FailureReason;
+            return string.IsNullOrEmpty(reason) || message.Contains(reason) ? message : message + "\n" + reason;
         }
 
         protected void QueueError(string message) => errorQueue.Enqueue(message);
@@ -341,6 +361,14 @@ namespace TimberNet
                     // Optional display data: a malformed frame is dropped, never fatal to the session.
                     if (PlayerActivity.TryParse(control, out PlayerActivity? activity) && activity != null)
                         HandleActivity(client, activity);
+                    continue;
+                }
+                string? controlType = (string?)control[TYPE_KEY];
+                if (StatusFrames.IsStatusType(controlType))
+                {
+                    // Optional display data: a bad frame is ignored, never fatal to the session.
+                    try { HandleStatusFrame(client, controlType!, control); }
+                    catch (Exception e) { Log("Ignoring a bad status frame: " + e.Message); }
                     continue;
                 }
                 if ((string?)control[TYPE_KEY] == "SessionFault")
@@ -468,6 +496,7 @@ namespace TimberNet
             if (!Started || IsStopped) return;
             ProcessReceivedMap();
             ProcessReceivedEventsQueue();
+            OnUpdate();
 
         }
 

@@ -46,20 +46,14 @@ namespace BeaverBuddies.IO
                 ];
                 if (SteamOverlayConnectionService.IsSteamEnabled && Settings.EnableSteam)
                 {
-                    listeners.Add(new SteamListener());
-                }
-                SocketListener = new MultiSocketListener(listeners.ToArray());
-                if (SocketListener is MultiSocketListener)
-                {
-                    foreach (ISocketListener child in ((MultiSocketListener)SocketListener).Listeners)
+                    try { listeners.Add(new SteamListener()); }
+                    catch (Exception e)
                     {
-                        TryRegisterSteamPacketReceiver(child);
+                        // Steam is an optional extra; never let it prevent hosting over direct IP.
+                        Plugin.LogError("Steam invites are unavailable this session (direct IP still works): " + e.Message);
                     }
                 }
-                else
-                {
-                    TryRegisterSteamPacketReceiver(SocketListener);
-                }
+                SocketListener = new MultiSocketListener(listeners.ToArray());
                 NetBase = new TimberServer(
                     SocketListener,
                     () =>
@@ -108,6 +102,8 @@ namespace BeaverBuddies.IO
             string message = $"The Host has already started the game, and the game can no longer be joined. " +
                 $"Ask the Host to rehost and join before they unpause.";
             NetBase.StopAcceptingClients(message);
+            // Tell Steam friends too, so an old invite explains itself instead of hanging.
+            (SocketListener as MultiSocketListener)?.GetListener<SteamListener>()?.CloseToNewGuests();
             // TODO: remove map from memory
         }
 

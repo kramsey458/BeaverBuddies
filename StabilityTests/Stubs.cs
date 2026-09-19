@@ -1,19 +1,5 @@
-// Only the external Steam/Unity/game APIs are doubled. Tests compile the
-// production Steam socket, packet listener and animation patch source directly.
-namespace Steamworks
-{
-    public readonly record struct CSteamID(ulong Value);
-    public enum EP2PSend { k_EP2PSendReliable }
-    public static class SteamFriends { public static string GetFriendPersonaName(CSteamID id) => "Test"; }
-    public static class SteamNetworking
-    {
-        public static bool SendSucceeds = true;
-        public static bool SendP2PPacket(CSteamID id, byte[] bytes, uint count, EP2PSend mode) => SendSucceeds;
-        public static bool IsP2PPacketAvailable(out uint size) { size = 0; return false; }
-        public static bool ReadP2PPacket(byte[] buffer, uint size, out uint read, out CSteamID id)
-        { read = 0; id = default; return false; }
-    }
-}
+// Only the external Unity/game APIs are doubled. Tests compile the production Steam transport
+// core and animation patch source directly.
 namespace Timberborn.BuildingsUI { }
 namespace Timberborn.Workshops { }
 namespace UnityEngine.PlayerLoop { }

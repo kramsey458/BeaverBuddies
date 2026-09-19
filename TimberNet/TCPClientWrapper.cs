@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TimberNet
 {
-    public class TCPClientWrapper : ISocketStream
+    public class TCPClientWrapper : ISocketStream, ITransportInfo
     {
         public readonly string? address;
         public readonly int port;
@@ -16,6 +16,8 @@ namespace TimberNet
         public int MaxBytesPerSecond => 1024 * 1024; // 1 MB/s
 
         public string? Name => null;
+
+        public string TransportName => "Direct";
 
         public TCPClientWrapper(string address, int port) 
         {

@@ -1,0 +1,10 @@
+{
+  "KeyBindingSpec": {
+    "Id": "BeaverBuddies.KeyBind.TogglePanel",
+    "GroupId": "KeyBindingGroup.BeaverBuddies",
+    "LocKey": "BeaverBuddies.KeyBindings.TogglePanel",
+    "Order": 1,
+    "AllowOtherModifiers": false,
+    "DevModeOnly": false
+  }
+}
