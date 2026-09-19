@@ -1,6 +1,6 @@
 # Player activity indicators
 
-Built on Preview 8. Other players' cursors, selections and building activity are
+Other players' cursors, selections and building activity are
 shown on your screen, and you can restyle each player's cursor.
 
 ## What you see

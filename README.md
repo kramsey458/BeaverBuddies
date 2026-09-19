@@ -75,38 +75,38 @@ Ping is measured by the network layer (a tiny probe once a second), so it means 
 
 ## How this fork improves on the original
 
-This is an analysis of the [changelog](STABILITY-CHANGELOG.md), the release notes and the commit history against the original project's `v1.1` branch at the point this fork branched (commit `a13b1f2`, 24 August 2026). Since then the fork has changed 78 files (about 8,000 lines added). As of September 2026 the original's `v1.1` branch has not moved since that commit, so this comparison is current.
+The comparison below is against the original project's `v1.1` branch at the point this fork branched (commit `a13b1f2`, 24 August 2026). Since then the fork has changed 78 files (about 8,000 lines added). As of September 2026 the original's `v1.1` branch has not moved since that commit, so this comparison is current.
 
 Each item says how well it is confirmed: **confirmed** means the maintainer verified it in a real multiplayer playtest; **tested** means it is covered by automated regression checks but has not been confirmed in a live session.
 
 **Connections and Steam**
 
-- **Steam networking rebuilt on Valve's current API** (1.1.3). The original used the older, deprecated API, with a fixed 128 KB/s cap on the save transfer. Failures now end with Steam's own reason in plain language, and a Steam problem can no longer stop direct-IP hosting. *Confirmed with a real Steam friend.*
-- **Steam packet handling hardened** (1.1.0-stability.1). The original's own code comment says its Steam read routine "will fail" if a packet is read in pieces. The fork now keeps unread data, checks read ranges, wakes blocked readers when a connection closes, rejects failed sends, and locks each network frame so a header and its payload can never be interleaved. *Tested.*
-- **Mismatched builds refused up front** (stability.5). The original only warned about a version mismatch after the save had loaded. The fork checks the game version and the exact mod build before the save is transferred, with a time limit and a clear message. *Tested.*
-- **A failed multiplayer action stops safely** (stability.5). Replay stops after a failed action, pending actions are discarded, the session pauses and peers are told, so two games do not quietly drift apart. Connection cleanup bugs were fixed at the same time. *Tested.*
+- **Steam networking rebuilt on Valve's current API.** The original used the older, deprecated API, with a fixed 128 KB/s cap on the save transfer. Failures now end with Steam's own reason in plain language, and a Steam problem can no longer stop direct-IP hosting. *Confirmed with a real Steam friend.*
+- **Steam packet handling made robust.** A comment in the original's Steam read routine says it "will fail" if Steam merges several messages into one packet, and it logs "This is probably a bug!" when bytes are left over. The rebuilt transport keeps unread data between reads, checks read ranges and wakes blocked readers when a connection closes. It is tested with messages split mid-event and with a 220 KB event. Each network frame is also written under a lock, so a header and its payload can never be interleaved. *Tested.*
+- **Mismatched builds refused up front.** The original only warned about a version mismatch after the save had loaded. The fork checks the game version and the exact mod build before the save is transferred, with a time limit and a clear message. *Tested.*
+- **A failed multiplayer action stops safely.** Replay stops after a failed action, pending actions are discarded, the session pauses and peers are told, so two games do not quietly drift apart. Connection cleanup bugs were fixed at the same time. *Tested.*
 
 **Desyncs and determinism**
 
-- **Water no longer depends on frame rate** (stability.4). The depth-limited water source advanced using render-frame time, so players at different frame rates saw different water. It now uses the simulation tick interval in multiplayer. *Confirmed: resolved a reported "badtide" desync.*
-- **Water sources applied in a consistent order** (stability.3). With several sources affecting one column, the installed game produced three different results across six registration orders; the fork produces one. This was not established as the cause of the badtide desync. *Tested.*
-- **Stale saving flag fixed** (stability.2). A flag could stay set after an exit save, making one player skip a moisture calculation, consistent with reported desyncs right at join. *Tested.*
-- **Random-number bookkeeping made safe** (stability.1 and .5). Nested random-number scopes are counted correctly and restored even when an error interrupts them. *Tested.*
-- **Equal-distance demolition jobs chosen deterministically** (stability.7), by persistent target IDs. *Tested; not yet confirmed in a playtest.*
-- **Entity ID collisions handled explicitly** (stability.1): a regenerated ID is now applied, and the game fails with a clear error if no unique ID can be found. *Tested.*
-- **Stuck-controls recovery** (stability.8). Input state is reset after a desync and when a multiplayer game loads. This is a targeted recovery measure: its root cause was not proven and the original report has not been confirmed fixed. *Tested with a mocked device reset.*
+- **Water no longer depends on frame rate.** The depth-limited water source advanced using render-frame time, so players at different frame rates saw different water. It now uses the simulation tick interval in multiplayer. *Confirmed: resolved a reported "badtide" desync.*
+- **Water sources applied in a consistent order.** With several sources affecting one column, the installed game produced three different results across six registration orders; the fork produces one. This was not established as the cause of the badtide desync. *Tested.*
+- **Stale saving flag fixed.** A flag could stay set after an exit save, making one player skip a moisture calculation, consistent with reported desyncs right at join. *Tested.*
+- **Random-number bookkeeping made safe.** Nested random-number scopes are counted correctly and restored even when an error interrupts them. *Tested.*
+- **Equal-distance demolition jobs chosen deterministically**, by persistent target IDs. *Tested; not yet confirmed in a playtest.*
+- **Entity ID collisions handled explicitly.** A regenerated ID is now applied, and the game fails with a clear error if no unique ID can be found. *Tested.*
+- **Stuck-controls recovery.** Input state is reset after a desync and when a multiplayer game loads. This is a targeted recovery measure: its root cause was not proven and the original report has not been confirmed fixed. *Tested with a mocked device reset.*
 
 **Crashes**
 
-- **Animation crash** (stability.1): a path cursor that could move backward between ticks, and non-finite visual coordinates, are handled. *Confirmed.*
-- **Demolition-selection crash** (1.1.1): replaying an area selection that included buildings already demolished used to end the whole session. Missing ones are now skipped. *Tested; not yet confirmed in a live session.*
+- **Animation crash.** A path cursor that could move backward between ticks, and non-finite visual coordinates, are handled. *Confirmed.*
+- **Demolition-selection crash.** Replaying an area selection that included buildings already demolished used to end the whole session. Missing ones are now skipped. *Tested; not yet confirmed in a live session.*
 
 **Awareness and usability**
 
-- **Player activity** (1.1.1): other players' cursors, selection outlines, and Viewing / Editing labels, plus a **Player cursors** dialog (Options menu) for each player's color, size and transparency. See [PLAYER-ACTIVITY.md](PLAYER-ACTIVITY.md). *Confirmed.*
-- **Steam invites and the connection panel** (1.1.3), described above. *Confirmed.*
+- **Player activity.** Other players' cursors, selection outlines, and Viewing / Editing labels, plus a **Player cursors** dialog (Options menu) for each player's color, size and transparency. See [PLAYER-ACTIVITY.md](PLAYER-ACTIVITY.md). *Confirmed.*
+- **Steam invites and the connection panel**, described above. *Confirmed.*
 
-**Performance** (stability.6): fewer allocations from diagnostics, faster handling of the event backlog, one JSON parse per network message instead of two, and routine logging skipped unless needed. In synthetic tests, 4,000 ordered event inserts went from about 439 ms to under 1 ms, and 16 diagnostic captures stopped allocating about 85 MB. These are not frame-rate measurements. *Confirmed to play well in a two-player playtest.*
+**Performance.** Fewer allocations from diagnostics, faster handling of the event backlog, one JSON parse per network message instead of two, and routine logging skipped unless needed. In synthetic tests, 4,000 ordered event inserts went from about 439 ms to under 1 ms, and 16 diagnostic captures stopped allocating about 85 MB. These are not frame-rate measurements. *Confirmed to play well in a two-player playtest.*
 
 **What the fork does not change.** It does not make desyncs impossible, and it has not been tried on more than two players. Everything the original provides (multi-start maps, pings, the pause-reduction setting, hosting and joining from the menus) is still there.
 
@@ -128,20 +128,9 @@ The 1.1.3 validation run passed **144 checks**: **87** in `StabilityTests` (netw
 
 These checks cannot start Unity or prove full multiplayer determinism, and they need the game installed locally (no proprietary game files are included in this repository). See [StabilityTests/README.md](StabilityTests/README.md) for how to run them. The maintainer's real playtests, described above, are what confirm behavior in the live game.
 
-## Release history and credits
+## Credits and license
 
-| Version | What it added |
-| --- | --- |
-| **1.1.3** | Steam invites on Valve's current API, and the connection panel. |
-| **1.1.1** | Player activity (cursors, selections, Viewing / Editing), per-player cursor settings, and the demolition-selection crash fix. Called "Preview 17" while in testing. |
-| 1.1.0-stability.8 | Input recovery after a desync and on multiplayer load. |
-| 1.1.0-stability.7 | Deterministic choice between equal-distance demolition jobs. |
-| 1.1.0-stability.6 | Performance improvements. |
-| 1.1.0-stability.5 | Build compatibility check, safe stop after a failed action, safer random numbers. |
-| 1.1.0-stability.4 | Water no longer depends on frame rate. |
-| 1.1.0-stability.1 to .3 | Animation crash, Steam packet handling, saving-flag and water-ordering fixes, diagnostics. |
-
-There was no 1.1.2 release: it existed only as the test build `1.1.2-steam.1`, whose changes are part of 1.1.3. Tags numbered `v1.1.0-stability.9` to `.16` are from an abandoned line and are not part of this history. The full details are in [STABILITY-CHANGELOG.md](STABILITY-CHANGELOG.md).
+Every change in this fork is listed in [STABILITY-CHANGELOG.md](STABILITY-CHANGELOG.md).
 
 Thank you to the original BeaverBuddies authors and contributors, whose work this fork builds on. Their license (GPL-3.0) and authorship are preserved in [License.txt](License.txt) and the repository history.
 
