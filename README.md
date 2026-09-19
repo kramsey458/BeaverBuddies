@@ -51,7 +51,7 @@ Steam friend invites are a first-class way to play, alongside direct IP.
 - **Settings** (Mod Settings → BeaverBuddies): **Enable Steam Networking** and **Allow Friends to Join Directly via Steam**.
 - **Who can join:** the host opens a friends-only Steam lobby, and only players who joined that lobby are accepted. A stranger who knows your Steam ID cannot connect.
 - **How it works:** connections go straight between players when Steam can find a route and are otherwise relayed through Steam's network. Valve documents that relaying keeps players' IP addresses hidden from each other. The original used Valve's older networking API, which Valve now marks as deprecated; this fork uses the current one.
-- **If Steam has a problem,** hosting over direct IP still works. If joining hangs on "Receiving map...", the two players are almost certainly running different builds.
+- **If Steam has a problem,** hosting over direct IP still works. Hamachi has also been tested to create a virtual LAN to avoid port forwarding and works.
 - **Status:** confirmed working in real playtests between the maintainer and a friend. More details, including how to read the log if something fails, are in [STEAM-INVITES.md](STEAM-INVITES.md).
 
 ## The connection panel
